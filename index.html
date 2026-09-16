@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Task Board</title>
   <meta name="description" content="GitHub Issues をカンバンで操作する個人用タスクボード" />
-  <meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -14,9 +14,6 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -49,7 +46,29 @@
     <input id="quick-title" type="text" placeholder="タスクを追加…" enterkeyhint="done" required />
     <select id="quick-column" aria-label="追加先の列"></select>
     <button type="submit" class="btn btn--primary">追加</button>
+    <button type="button" class="btn" id="intake-button" title="テキストを貼ってまとめてタスク化">まとめて</button>
   </form>
+
+  <!-- まとめて追加（貼り付け→タスク化） -->
+  <dialog id="intake-dialog" class="dialog">
+    <form method="dialog" class="dialog__body" id="intake-form">
+      <h2 class="dialog__title">まとめて追加</h2>
+      <p class="dialog__lead">メモ・メール・議事録などを貼ると、タスクに分解します。</p>
+      <label class="field">
+        <span class="visually-hidden">テキスト</span>
+        <textarea id="intake-text" rows="6" placeholder="ここに貼り付け"></textarea>
+      </label>
+      <div class="intake__tools">
+        <button type="button" class="btn" id="intake-parse">タスクに分解</button>
+        <span id="intake-message" class="intake__message"></span>
+      </div>
+      <div id="intake-list" class="intake__list"></div>
+      <div class="dialog__actions">
+        <button type="button" class="btn" id="intake-cancel">閉じる</button>
+        <button type="button" class="btn btn--primary" id="intake-add" disabled>追加</button>
+      </div>
+    </form>
+  </dialog>
 
   <!-- 設定ダイアログ -->
   <dialog id="settings-dialog" class="dialog">
@@ -106,6 +125,7 @@
 
   <template id="card-template">
     <article class="card" tabindex="0" role="button">
+      <button class="card__done" type="button" title="完了にする" aria-label="完了にする">✓</button>
       <div class="card__title"></div>
       <div class="card__meta">
         <span class="card__number mono"></span>

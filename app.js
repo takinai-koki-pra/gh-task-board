@@ -27,6 +27,7 @@ const state = {
   pending: new Set(),
   demo: new URLSearchParams(location.search).get("demo") === "1",
   local: false,
+  ai: false, // serve.py 経由で claude CLI が使えるか
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -52,6 +53,11 @@ const el = {
   taskLabels: $("#task-labels"),
   taskMessage: $("#task-message"),
   cardTemplate: $("#card-template"),
+  intakeDialog: $("#intake-dialog"),
+  intakeText: $("#intake-text"),
+  intakeList: $("#intake-list"),
+  intakeMessage: $("#intake-message"),
+  intakeAdd: $("#intake-add"),
 };
 
 // ---------- ユーティリティ ----------
@@ -264,17 +270,17 @@ function moveIssue(number, colKey) {
   mutate(number, patchForColumn(issue, colKey), { successText: `${col.name} へ移動しました` });
 }
 
-async function createIssue(title, colKey) {
+async function createIssue(title, colKey, { body = "", quiet = false } = {}) {
   const col = COLUMNS.find((c) => c.key === colKey) || COLUMNS[1];
   const labels = col.label ? [col.label] : [];
   const btn = el.quickAdd.querySelector("button[type=submit]");
   btn.disabled = true;
   try {
-    const issue = await state.api.createIssue({ title, labels });
+    const issue = await state.api.createIssue({ title, body, labels });
     state.issues.unshift(issue);
     if (!state.demo) saveCache(state.config.repo, state.issues);
     render();
-    toast(`#${issue.number} を追加しました`);
+    if (!quiet) toast(`#${issue.number} を追加しました`);
     return true;
   } catch (err) {
     toast(describeError(err), "error");
@@ -334,7 +340,7 @@ function dragEnd(x, y, { cancelled = false } = {}) {
 el.board.addEventListener("pointerdown", (e) => {
   if (e.button !== 0) return;
   const card = e.target.closest(".card");
-  if (!card) return;
+  if (!card || e.target.closest(".card__done")) return;
   drag.card = card;
   drag.startX = e.clientX;
   drag.startY = e.clientY;
@@ -365,7 +371,14 @@ document.addEventListener("touchmove", (e) => { if (drag.active) e.preventDefaul
 el.board.addEventListener("click", (e) => {
   if (drag.suppressClick) return;
   const card = e.target.closest(".card");
-  if (card) openTask(Number(card.dataset.number));
+  if (!card) return;
+  const number = Number(card.dataset.number);
+  if (e.target.closest(".card__done")) {
+    // ワンクリックで完了 / 完了済みなら Todo に戻す
+    moveIssue(number, columnOf(state.issues.find((i) => i.number === number)) === "done" ? "todo" : "done");
+    return;
+  }
+  openTask(number);
 });
 el.board.addEventListener("keydown", (e) => {
   const card = e.target.closest(".card");
@@ -493,6 +506,118 @@ el.refresh.addEventListener("click", () => refresh());
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && state.api) refresh({ silent: true }); });
 window.addEventListener("online", () => state.api && refresh({ silent: true }));
 
+// ---------- まとめて追加（貼り付け → タスク化） ----------
+const BULLET_RE = /^(?:[-*•・■□▪‣◦]|\d+[.)]|\[[ xX]\])\s*/;
+
+function splitLines(text) {
+  const seen = new Set();
+  return text.split(/\r?\n/)
+    .map((l) => l.trim().replace(BULLET_RE, "").trim())
+    .filter((l) => l && !seen.has(l) && seen.add(l))
+    .slice(0, 50)
+    .map((title) => ({ title, body: "", column: "todo" }));
+}
+
+async function parseIntake(text) {
+  if (state.ai) {
+    try {
+      const res = await fetch("./ai/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || res.statusText);
+      return { tasks: data.tasks, via: "ai" };
+    } catch (err) {
+      return { tasks: splitLines(text), via: "lines", error: err.message };
+    }
+  }
+  return { tasks: splitLines(text), via: "lines" };
+}
+
+function renderIntake(tasks) {
+  el.intakeList.replaceChildren(
+    ...tasks.map((t) => {
+      const row = document.createElement("label");
+      row.className = "intake__item";
+      const check = Object.assign(document.createElement("input"), { type: "checkbox", checked: true });
+      const title = Object.assign(document.createElement("input"), { type: "text", value: t.title });
+      const col = document.createElement("select");
+      for (const c of COLUMNS.filter((c) => !c.closed)) col.appendChild(Object.assign(document.createElement("option"), { value: c.key, textContent: c.name }));
+      col.value = t.column || "todo";
+      check.addEventListener("change", () => { row.classList.toggle("is-off", !check.checked); updateIntakeAdd(); });
+      row.append(check, title, col);
+      if (t.body) row.appendChild(Object.assign(document.createElement("div"), { className: "intake__note", textContent: t.body }));
+      row.dataset.body = t.body || "";
+      return row;
+    })
+  );
+  updateIntakeAdd();
+}
+
+function updateIntakeAdd() {
+  const n = el.intakeList.querySelectorAll("input[type=checkbox]:checked").length;
+  el.intakeAdd.disabled = n === 0;
+  el.intakeAdd.textContent = n ? `${n} 件を追加` : "追加";
+}
+
+let intakeBusy = false;
+async function runIntakeParse() {
+  const text = el.intakeText.value.trim();
+  if (!text || intakeBusy) return;
+  intakeBusy = true;
+  $("#intake-parse").disabled = true;
+  el.intakeMessage.textContent = state.ai ? "Claude で整理しています…" : "行ごとに分割しています…";
+  const { tasks, via, error } = await parseIntake(text);
+  renderIntake(tasks);
+  el.intakeMessage.textContent =
+    via === "ai" ? `Claude が ${tasks.length} 件に整理しました。編集してから追加できます。`
+    : error ? `Claude を使えなかったので行ごとに分割しました（${error}）`
+    : `${tasks.length} 件に分割しました。編集してから追加できます。`;
+  $("#intake-parse").disabled = false;
+  intakeBusy = false;
+}
+
+function openIntake(text = "") {
+  if (!state.api) { openSettings(); return; }
+  el.intakeText.value = text;
+  el.intakeList.replaceChildren();
+  el.intakeMessage.textContent = "";
+  updateIntakeAdd();
+  el.intakeDialog.showModal();
+  if (text) runIntakeParse(); else el.intakeText.focus();
+}
+
+$("#intake-button").addEventListener("click", () => openIntake());
+$("#intake-parse").addEventListener("click", runIntakeParse);
+$("#intake-cancel").addEventListener("click", () => el.intakeDialog.close());
+el.intakeDialog.addEventListener("click", (e) => { if (e.target === el.intakeDialog) el.intakeDialog.close(); });
+el.intakeText.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); runIntakeParse(); } });
+el.intakeAdd.addEventListener("click", async () => {
+  const rows = [...el.intakeList.querySelectorAll(".intake__item")].filter((r) => r.querySelector("input[type=checkbox]").checked);
+  const items = rows.map((r) => ({ title: r.querySelector("input[type=text]").value.trim(), column: r.querySelector("select").value, body: r.dataset.body })).filter((t) => t.title);
+  if (!items.length) return;
+  el.intakeAdd.disabled = true;
+  el.intakeMessage.textContent = `追加中… 0/${items.length}`;
+  let ok = 0;
+  for (const t of items) {
+    if (await createIssue(t.title, t.column, { body: t.body, quiet: true })) ok++;
+    el.intakeMessage.textContent = `追加中… ${ok}/${items.length}`;
+  }
+  el.intakeDialog.close();
+  toast(`${ok} 件を追加しました`);
+});
+
+// クイック入力に複数行を貼ったら、まとめて追加へ
+el.quickTitle.addEventListener("paste", (e) => {
+  const text = e.clipboardData?.getData("text") || "";
+  if (/\n/.test(text.trim())) { e.preventDefault(); openIntake(text); }
+});
+
+// "/" でクイック入力へ
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && !e.ctrlKey && !e.metaKey && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName) && !document.querySelector("dialog[open]")) {
+    e.preventDefault(); el.quickTitle.focus();
+  }
+});
+
 // ---------- 起動 ----------
 function connect(config) {
   state.config = config;
@@ -510,24 +635,25 @@ async function probeLocalProxy() {
 }
 
 async function boot() {
-  const local = await probeLocalProxy();
-  if (local) {
-    state.local = true;
-    connect({ repo: local.repo, base: "./gh" });
-    el.cfgToken.closest(".field").hidden = true;
-    el.cfgToken.required = false;
-    setStatus("ローカルモード: gh CLI の認証で接続しています。");
-    const cached = loadCache(local.repo);
-    if (cached) { state.issues = cached; render(); }
-    await refresh({ silent: true });
-    return;
-  }
   if (state.demo) {
     const res = await fetch("demo-data.json");
     state.api = new DemoApi(await res.json());
     state.config = { repo: "demo/tasks" };
     el.repoName.textContent = "デモ（保存されません）";
     setStatus("デモモード: 操作はこの画面内だけに反映され、GitHub には書き込みません。");
+    await refresh({ silent: true });
+    return;
+  }
+  const local = await probeLocalProxy();
+  if (local) {
+    state.local = true;
+    state.ai = !!local.ai;
+    connect({ repo: local.repo, base: "./gh" });
+    el.cfgToken.closest(".field").hidden = true;
+    el.cfgToken.required = false;
+    setStatus("ローカルモード: gh CLI の認証で接続しています。");
+    const cached = loadCache(local.repo);
+    if (cached) { state.issues = cached; render(); }
     await refresh({ silent: true });
     return;
   }
@@ -541,6 +667,9 @@ async function boot() {
 
 boot();
 
-if ("serviceWorker" in navigator && !state.demo) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+// Service Worker は公開サイトでのみ使う（ローカル開発ではキャッシュが邪魔になる）
+if ("serviceWorker" in navigator) {
+  const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
+  if (isLocal || state.demo) navigator.serviceWorker.getRegistrations?.().then((rs) => rs.forEach((r) => r.unregister()));
+  else window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }

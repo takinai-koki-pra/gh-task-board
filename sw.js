@@ -1,5 +1,5 @@
 // アプリシェルをキャッシュする Service Worker。GitHub API はキャッシュしない。
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `ghtb-${VERSION}`;
 const SHELL = ["./", "./index.html", "./style.css", "./app.js", "./api.js", "./manifest.webmanifest", "./icons/icon.svg"];
 

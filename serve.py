@@ -6,6 +6,8 @@
 認証には `gh auth token`（GitHub CLI のログイン）を使うので、ブラウザにトークンを貼る必要が無い。
 """
 import json
+import re
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -27,6 +29,42 @@ def gh_token() -> str:
 
 
 TOKEN = gh_token()
+
+AI_PROMPT = """あなたはタスク整理アシスタントです。ユーザーが貼り付けたテキスト（メモ・メール・議事録・箇条書きなど）から、
+実行すべきタスクを抽出し、JSON 配列だけを出力してください。説明文やコードフェンスは不要です。
+
+各要素の形式:
+{"title": "40字以内・動詞で終わる日本語のタスク名", "body": "補足（元テキストの関連部分・期日・リンク。無ければ空文字）", "column": "todo" または "backlog"}
+
+ルール:
+- 重複や言い換えは 1 つにまとめる
+- 挨拶・雑談・単なる事実の記述はタスクにしない
+- 期日や締切が明示されていれば title の末尾ではなく body に書く
+- 今すぐ着手すべきものは "todo"、いつかやる・検討中は "backlog"
+- 何も抽出できなければ []
+
+--- テキスト ---
+"""
+
+
+def ai_tasks(text: str):
+    """claude CLI（Claude Code のログイン）でテキストをタスク配列に変換する。"""
+    exe = shutil.which("claude") or "claude"
+    cmd = [exe, "-p", "--output-format", "json", "--model", "haiku"]
+    # プロンプトは stdin で渡す（Windows の引数エンコーディング問題を避ける）
+    out = subprocess.run(cmd, input=AI_PROMPT + text, capture_output=True, text=True, encoding="utf-8", timeout=90)
+    if out.returncode != 0 and not out.stdout.strip():
+        raise RuntimeError(out.stderr.strip() or "claude CLI の起動に失敗しました")
+    res = json.loads(out.stdout)
+    if res.get("is_error"):
+        raise RuntimeError(res.get("result") or "claude CLI がエラーを返しました")
+    body = res.get("result", "")
+    m = re.search(r"\[.*\]", body, re.S)
+    tasks = json.loads(m.group(0) if m else body)
+    return [
+        {"title": str(t.get("title", "")).strip()[:120], "body": str(t.get("body", "")).strip(), "column": t.get("column") if t.get("column") in ("todo", "backlog", "doing") else "todo"}
+        for t in tasks if isinstance(t, dict) and str(t.get("title", "")).strip()
+    ]
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -76,12 +114,19 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/__local":
-            return self._json(200, {"repo": REPO})
+            return self._json(200, {"repo": REPO, "ai": True})
         if self.path.startswith("/gh/"):
             return self._proxy()
         return super().do_GET()
 
     def do_POST(self):
+        if self.path == "/ai/tasks":
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                text = json.loads(self.rfile.read(length) or b"{}").get("text", "")
+                return self._json(200, {"tasks": ai_tasks(text)})
+            except Exception as e:  # noqa: BLE001
+                return self._json(502, {"message": str(e)})
         return self._proxy() if self.path.startswith("/gh/") else self.send_error(404)
 
     def do_PATCH(self):
