@@ -33,13 +33,18 @@ GitHub Issues をカンバンで操作する個人用タスクボード。Web �
 
 Safari でアプリの URL を開き、共有メニュー →「ホーム画面に追加」。スタンドアロン表示になり、アプリのように起動できる。
 
-## ローカルで動かす
+## PC で動かす（トークン不要）
+
+GitHub CLI（`gh auth login` 済み）があれば、トークンを貼らずにそのまま使える。
 
 ```bash
-python -m http.server 8787
+python serve.py
 ```
 
-`http://127.0.0.1:8787/` を開く。`?demo=1` を付けるとサンプルデータで動作確認できる（GitHub には書き込まない）。
+ブラウザが `http://127.0.0.1:8790/` で開く。既定のリポジトリは `takinai-koki-pra/tasks`。変えるときは `python serve.py owner/repo`。
+`serve.py` は静的ファイル配信に加え、`/gh/...` を `gh auth token` 付きで api.github.com へ転送する。
+
+`?demo=1` を付けるとサンプルデータで動作確認できる（GitHub には書き込まない）。
 
 ## デプロイ
 

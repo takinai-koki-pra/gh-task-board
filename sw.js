@@ -18,6 +18,7 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   if (url.hostname === "api.github.com") return; // 常にネットワーク
   if (url.origin !== location.origin) return; // フォント等はブラウザに任せる
+  if (url.pathname.includes("/gh/") || url.pathname.endsWith("/__local")) return; // ローカルプロキシ経由の API
   // stale-while-revalidate: キャッシュを即返し、裏で更新する
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {

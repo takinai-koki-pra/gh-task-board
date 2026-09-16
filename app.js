@@ -26,6 +26,7 @@ const state = {
   filter: "",
   pending: new Set(),
   demo: new URLSearchParams(location.search).get("demo") === "1",
+  local: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -453,18 +454,18 @@ $("#cfg-save").addEventListener("click", async () => {
   const token = el.cfgToken.value.trim();
   const msg = el.cfgMessage;
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { msg.hidden = false; msg.dataset.kind = "error"; msg.textContent = "リポジトリは owner/repo の形式で入力してください。"; return; }
-  if (!token) { msg.hidden = false; msg.dataset.kind = "error"; msg.textContent = "トークンを入力してください。"; return; }
+  if (!token && !state.local) { msg.hidden = false; msg.dataset.kind = "error"; msg.textContent = "トークンを入力してください。"; return; }
   const btn = $("#cfg-save");
   btn.disabled = true;
   msg.hidden = false; msg.dataset.kind = "info"; msg.textContent = "接続を確認しています…";
-  const api = new GitHubApi({ token, repo });
+  const api = state.local ? new GitHubApi({ repo, base: "./gh" }) : new GitHubApi({ token, repo });
   try {
     const info = await api.getRepo();
     const created = await api.ensureLabels(STATUS_LABEL_DEFS);
     msg.dataset.kind = "ok";
     msg.textContent = `接続しました: ${info.full_name}` + (created.length ? `（ラベル ${created.join(", ")} を作成）` : "");
-    connect({ repo: info.full_name, token });
-    saveConfig(state.config);
+    connect(state.local ? { repo: info.full_name, base: "./gh" } : { repo: info.full_name, token });
+    if (!state.local) saveConfig(state.config);
     setTimeout(() => el.settingsDialog.close(), 600);
     await refresh();
   } catch (err) {
@@ -499,7 +500,28 @@ function connect(config) {
   el.repoName.textContent = config.repo;
 }
 
+// serve.py 経由（PC ローカル）なら gh CLI の認証を使うので、トークン入力なしで繋ぐ。
+async function probeLocalProxy() {
+  if (!["localhost", "127.0.0.1"].includes(location.hostname)) return null;
+  try {
+    const res = await fetch("./__local", { cache: "no-store" });
+    return res.ok ? await res.json() : null;
+  } catch { return null; }
+}
+
 async function boot() {
+  const local = await probeLocalProxy();
+  if (local) {
+    state.local = true;
+    connect({ repo: local.repo, base: "./gh" });
+    el.cfgToken.closest(".field").hidden = true;
+    el.cfgToken.required = false;
+    setStatus("ローカルモード: gh CLI の認証で接続しています。");
+    const cached = loadCache(local.repo);
+    if (cached) { state.issues = cached; render(); }
+    await refresh({ silent: true });
+    return;
+  }
   if (state.demo) {
     const res = await fetch("demo-data.json");
     state.api = new DemoApi(await res.json());

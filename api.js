@@ -10,19 +10,21 @@ export class GitHubError extends Error {
 }
 
 export class GitHubApi {
-  constructor({ token, repo }) {
+  // base を指定すると（serve.py のローカルプロキシ等）、そこへ転送しトークンは付けない。
+  constructor({ token, repo, base }) {
     this.token = token;
     this.repo = repo; // "owner/name"
+    this.base = base || API;
   }
 
   async request(path, { method = "GET", body, query } = {}) {
-    const url = new URL(API + path);
+    const url = new URL(this.base + path, location.href);
     if (query) for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
     const res = await fetch(url, {
       method,
       headers: {
         Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${this.token}`,
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
         "X-GitHub-Api-Version": "2022-11-28",
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
