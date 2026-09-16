@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Task Board</title>
+  <meta name="description" content="GitHub Issues をカンバンで操作する個人用タスクボード" />
+  <meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Tasks" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__brand">
+      <span class="topbar__mark" aria-hidden="true"></span>
+      <button id="repo-button" class="topbar__repo" type="button" title="設定を開く">
+        <span id="repo-name">—</span>
+      </button>
+    </div>
+    <div class="topbar__actions">
+      <label class="search">
+        <span class="visually-hidden">検索</span>
+        <input id="search" type="search" placeholder="検索" autocomplete="off" />
+      </label>
+      <button id="refresh-button" class="iconbtn" type="button" title="再読み込み" aria-label="再読み込み">
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M16.5 10a6.5 6.5 0 1 1-1.9-4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.5 3.5v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="settings-button" class="iconbtn" type="button" title="設定" aria-label="設定">
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="status" class="statusline" hidden></div>
+
+  <main id="board" class="board" aria-label="タスクボード"></main>
+
+  <form id="quick-add" class="quickadd" autocomplete="off">
+    <input id="quick-title" type="text" placeholder="タスクを追加…" enterkeyhint="done" required />
+    <select id="quick-column" aria-label="追加先の列"></select>
+    <button type="submit" class="btn btn--primary">追加</button>
+  </form>
+
+  <!-- 設定ダイアログ -->
+  <dialog id="settings-dialog" class="dialog">
+    <form method="dialog" class="dialog__body" id="settings-form">
+      <h2 class="dialog__title">設定</h2>
+      <p class="dialog__lead">タスクは GitHub Issues として保存されます。<br>Fine-grained personal access token（対象リポジトリの Issues: Read and write）を用意してください。</p>
+      <label class="field">
+        <span>リポジトリ</span>
+        <input id="cfg-repo" type="text" placeholder="owner/repo" spellcheck="false" required />
+      </label>
+      <label class="field">
+        <span>Personal access token</span>
+        <input id="cfg-token" type="password" placeholder="github_pat_…" spellcheck="false" autocomplete="off" required />
+      </label>
+      <p class="field__hint">トークンはこの端末のブラウザ内にのみ保存されます。サーバーには送られません。</p>
+      <div id="cfg-message" class="dialog__message" hidden></div>
+      <div class="dialog__actions">
+        <button type="button" class="btn" id="cfg-cancel">閉じる</button>
+        <button type="button" class="btn btn--primary" id="cfg-save">接続して保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- タスク詳細ダイアログ -->
+  <dialog id="task-dialog" class="dialog dialog--task">
+    <form method="dialog" class="dialog__body" id="task-form">
+      <div class="task__head">
+        <span id="task-number" class="mono"></span>
+        <a id="task-link" class="task__ghlink" target="_blank" rel="noopener">GitHub で開く ↗</a>
+      </div>
+      <label class="field">
+        <span class="visually-hidden">タイトル</span>
+        <input id="task-title" type="text" class="task__title" required />
+      </label>
+      <label class="field">
+        <span>メモ</span>
+        <textarea id="task-body" rows="6" placeholder="詳細・リンク・チェックリストなど（Markdown）"></textarea>
+      </label>
+      <div class="field">
+        <span>列</span>
+        <div id="task-columns" class="segmented" role="radiogroup" aria-label="列"></div>
+      </div>
+      <div class="field">
+        <span>ラベル</span>
+        <div id="task-labels" class="chips"></div>
+      </div>
+      <div id="task-message" class="dialog__message" hidden></div>
+      <div class="dialog__actions">
+        <button type="button" class="btn" id="task-cancel">閉じる</button>
+        <button type="button" class="btn btn--primary" id="task-save">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="card-template">
+    <article class="card" tabindex="0" role="button">
+      <div class="card__title"></div>
+      <div class="card__meta">
+        <span class="card__number mono"></span>
+        <span class="card__labels"></span>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
