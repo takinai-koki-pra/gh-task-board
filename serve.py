@@ -4,9 +4,10 @@
 
 静的ファイルを配信しつつ、/gh/... への呼び出しを api.github.com に転送する。
 認証には `gh auth token`（GitHub CLI のログイン）を使うので、ブラウザにトークンを貼る必要が無い。
+「まとめて追加」の整形は Gemini API（環境変数 GEMINI_API_KEY、または GEMINI_API_KEY_OP=op://... を 1Password CLI で解決）。
 """
 import json
-import re
+import os
 import shutil
 import subprocess
 import sys
@@ -31,38 +32,78 @@ def gh_token() -> str:
 TOKEN = gh_token()
 
 AI_PROMPT = """あなたはタスク整理アシスタントです。ユーザーが貼り付けたテキスト（メモ・メール・議事録・箇条書きなど）から、
-実行すべきタスクを抽出し、JSON 配列だけを出力してください。説明文やコードフェンスは不要です。
-
-各要素の形式:
-{"title": "40字以内・動詞で終わる日本語のタスク名", "body": "補足（元テキストの関連部分・期日・リンク。無ければ空文字）", "column": "todo" または "backlog"}
+実行すべきタスクを抽出してください。
 
 ルール:
+- title は 40 字以内の自然な日本語で、動詞で終える（例: 「山田さんに NDA を返送する」）
 - 重複や言い換えは 1 つにまとめる
 - 挨拶・雑談・単なる事実の記述はタスクにしない
-- 期日や締切が明示されていれば title の末尾ではなく body に書く
-- 今すぐ着手すべきものは "todo"、いつかやる・検討中は "backlog"
-- 何も抽出できなければ []
+- 期日・締切・リンク・補足は title ではなく body に書く（無ければ空文字）
+- 今すぐ着手すべきものは column を "todo"、いつかやる・検討中は "backlog"
+- 何も抽出できなければ空配列
 
 --- テキスト ---
 """
 
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_SCHEMA = {
+    "type": "ARRAY",
+    "items": {
+        "type": "OBJECT",
+        "properties": {
+            "title": {"type": "STRING"},
+            "body": {"type": "STRING"},
+            "column": {"type": "STRING", "enum": ["todo", "backlog"]},
+        },
+        "required": ["title", "body", "column"],
+    },
+}
+
+
+def gemini_key() -> str:
+    """GEMINI_API_KEY を環境変数から読む。無ければ GEMINI_API_KEY_OP（op:// 参照）を 1Password CLI で解決する。"""
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if key:
+        return key
+    ref = os.environ.get("GEMINI_API_KEY_OP", "").strip()
+    if ref and shutil.which("op"):
+        out = subprocess.run(["op", "read", ref], capture_output=True, text=True)
+        if out.returncode == 0:
+            return out.stdout.strip()
+    return ""
+
+
+GEMINI_KEY = gemini_key()
+
 
 def ai_tasks(text: str):
-    """claude CLI（Claude Code のログイン）でテキストをタスク配列に変換する。"""
-    exe = shutil.which("claude") or "claude"
-    cmd = [exe, "-p", "--output-format", "json", "--model", "haiku"]
-    # プロンプトは stdin で渡す（Windows の引数エンコーディング問題を避ける）
-    out = subprocess.run(cmd, input=AI_PROMPT + text, capture_output=True, text=True, encoding="utf-8", timeout=90)
-    if out.returncode != 0 and not out.stdout.strip():
-        raise RuntimeError(out.stderr.strip() or "claude CLI の起動に失敗しました")
-    res = json.loads(out.stdout)
-    if res.get("is_error"):
-        raise RuntimeError(res.get("result") or "claude CLI がエラーを返しました")
-    body = res.get("result", "")
-    m = re.search(r"\[.*\]", body, re.S)
-    tasks = json.loads(m.group(0) if m else body)
+    """Gemini API でテキストをタスク配列に変換する（JSON スキーマ指定）。"""
+    if not GEMINI_KEY:
+        raise RuntimeError("GEMINI_API_KEY が設定されていません")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": AI_PROMPT + text}]}],
+        "generationConfig": {"responseMimeType": "application/json", "responseSchema": GEMINI_SCHEMA, "temperature": 0.2},
+    }
+    req = urllib.request.Request(
+        url, data=json.dumps(payload).encode(), method="POST",
+        headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as res:
+            data = json.loads(res.read())
+    except urllib.error.HTTPError as e:
+        try:
+            msg = json.loads(e.read()).get("error", {}).get("message", "")
+        except Exception:  # noqa: BLE001
+            msg = ""
+        raise RuntimeError(f"Gemini API {e.code}: {msg or e.reason}") from None
+    parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+    raw = "".join(p.get("text", "") for p in parts)
+    tasks = json.loads(raw or "[]")
     return [
-        {"title": str(t.get("title", "")).strip()[:120], "body": str(t.get("body", "")).strip(), "column": t.get("column") if t.get("column") in ("todo", "backlog", "doing") else "todo"}
+        {"title": str(t.get("title", "")).strip()[:120], "body": str(t.get("body", "")).strip(),
+         "column": t.get("column") if t.get("column") in ("todo", "backlog") else "todo"}
         for t in tasks if isinstance(t, dict) and str(t.get("title", "")).strip()
     ]
 
@@ -114,7 +155,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/__local":
-            return self._json(200, {"repo": REPO, "ai": True})
+            return self._json(200, {"repo": REPO, "ai": bool(GEMINI_KEY)})
         if self.path.startswith("/gh/"):
             return self._proxy()
         return super().do_GET()
@@ -135,6 +176,6 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     url = f"http://127.0.0.1:{PORT}/"
-    print(f"Task Board: {url}  (repo: {REPO})  Ctrl+C で終了")
+    print(f"Task Board: {url}  (repo: {REPO})  AI: {'Gemini ' + GEMINI_MODEL if GEMINI_KEY else 'off (GEMINI_API_KEY 未設定)'}  Ctrl+C で終了")
     webbrowser.open(url)
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

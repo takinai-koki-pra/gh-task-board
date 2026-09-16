@@ -19,8 +19,8 @@ GitHub Issues をカンバンで操作する個人用タスクボード。Web �
 - カード右上の ✓ でワンクリック完了（完了済みなら Todo に戻す）
 - キーボード: `/` で入力欄へ、カードにフォーカスして `←` `→` で列移動、`Enter` で詳細
 - **まとめて追加**: 入力欄に複数行を貼る（または「まとめて」ボタン）と、テキストをタスクに分解して一括登録できる
-  - PC（`serve.py`）では `claude` CLI が整理する: 重複をまとめ、動詞で終わる短いタイトルに書き換え、期日などは本文へ
-  - `claude` が使えない環境（公開版、未ログイン）では行ごとに分割し、箇条書き記号や番号を取り除く
+  - PC（`serve.py`）では Gemini が整理する: 重複をまとめ、動詞で終わる短いタイトルに書き換え、期日などは本文へ
+  - Gemini が使えない環境（公開版、キー未設定）では行ごとに分割し、箇条書き記号や番号を取り除く
 
 ## セットアップ
 
@@ -47,7 +47,11 @@ python serve.py
 
 ブラウザが `http://127.0.0.1:8790/` で開く。既定のリポジトリは `takinai-koki-pra/tasks`。変えるときは `python serve.py owner/repo`。
 `serve.py` は静的ファイル配信に加え、`/gh/...` を `gh auth token` 付きで api.github.com へ転送する。
-「まとめて追加」の整形には Claude Code の `claude` CLI を使う（`--model haiku`）。ターミナルで一度 `claude` を起動してログインしておく。
+「まとめて追加」の整形には Gemini API（既定 `gemini-3.6-flash`、`GEMINI_MODEL` で変更可）を使う。キーは次のどちらかで渡す。
+
+- 環境変数 `GEMINI_API_KEY`
+- 1Password に入れている場合: `GEMINI_API_KEY_OP=op://<vault>/<item>/<field>` を設定しておくと起動時に `op read` で解決する。
+  または `op run --env-file .env -- python serve.py`（`.env` に `GEMINI_API_KEY=op://...`）でもよい
 
 `?demo=1` を付けるとサンプルデータで動作確認できる（GitHub には書き込まない）。
 

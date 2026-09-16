@@ -27,7 +27,7 @@ const state = {
   pending: new Set(),
   demo: new URLSearchParams(location.search).get("demo") === "1",
   local: false,
-  ai: false, // serve.py 経由で claude CLI が使えるか
+  ai: false, // serve.py 経由で Gemini が使えるか
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -564,12 +564,12 @@ async function runIntakeParse() {
   if (!text || intakeBusy) return;
   intakeBusy = true;
   $("#intake-parse").disabled = true;
-  el.intakeMessage.textContent = state.ai ? "Claude で整理しています…" : "行ごとに分割しています…";
+  el.intakeMessage.textContent = state.ai ? "Gemini で整理しています…" : "行ごとに分割しています…";
   const { tasks, via, error } = await parseIntake(text);
   renderIntake(tasks);
   el.intakeMessage.textContent =
-    via === "ai" ? `Claude が ${tasks.length} 件に整理しました。編集してから追加できます。`
-    : error ? `Claude を使えなかったので行ごとに分割しました（${error}）`
+    via === "ai" ? `Gemini が ${tasks.length} 件に整理しました。編集してから追加できます。`
+    : error ? `Gemini を使えなかったので行ごとに分割しました（${error}）`
     : `${tasks.length} 件に分割しました。編集してから追加できます。`;
   $("#intake-parse").disabled = false;
   intakeBusy = false;
