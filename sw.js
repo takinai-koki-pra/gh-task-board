@@ -1,5 +1,5 @@
 // アプリシェルをキャッシュする Service Worker。GitHub API はキャッシュしない。
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `ghtb-${VERSION}`;
 const SHELL = ["./", "./index.html", "./style.css", "./app.js", "./api.js", "./manifest.webmanifest", "./icons/icon.svg"];
 
@@ -18,13 +18,13 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   if (url.hostname === "api.github.com") return; // 常にネットワーク
   if (url.origin !== location.origin) return; // フォント等はブラウザに任せる
-  if (url.pathname.includes("/gh/") || url.pathname.endsWith("/__local")) return; // ローカルプロキシ経由の API
+  if (url.pathname.includes("/gh/") || url.pathname.endsWith("/__config") || url.pathname.endsWith("/ai/tasks")) return; // プロキシ経由の API
   // stale-while-revalidate: キャッシュを即返し、裏で更新する
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(e.request);
       const network = fetch(e.request)
-        .then((res) => { if (res.ok) cache.put(e.request, res.clone()); return res; })
+        .then((res) => { if (res.ok && !res.redirected) cache.put(e.request, res.clone()); return res; }) // Access のログイン画面は保存しない
         .catch(() => cached);
       return cached || network;
     })

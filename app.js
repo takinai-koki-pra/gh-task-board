@@ -625,12 +625,12 @@ function connect(config) {
   el.repoName.textContent = config.repo;
 }
 
-// serve.py 経由（PC ローカル）なら gh CLI の認証を使うので、トークン入力なしで繋ぐ。
+// serve.py（PC ローカル）や Cloudflare Worker の後ろにいる場合は、サーバー側の認証で繋ぐ（トークン入力なし）。
 async function probeLocalProxy() {
-  if (!["localhost", "127.0.0.1"].includes(location.hostname)) return null;
   try {
-    const res = await fetch("./__local", { cache: "no-store" });
-    return res.ok ? await res.json() : null;
+    const res = await fetch("./__config", { cache: "no-store" });
+    if (!res.ok || !(res.headers.get("Content-Type") || "").includes("json")) return null;
+    return await res.json();
   } catch { return null; }
 }
 
@@ -651,7 +651,7 @@ async function boot() {
     connect({ repo: local.repo, base: "./gh" });
     el.cfgToken.closest(".field").hidden = true;
     el.cfgToken.required = false;
-    setStatus("ローカルモード: gh CLI の認証で接続しています。");
+    if (["localhost", "127.0.0.1"].includes(location.hostname)) setStatus("ローカルモード: gh CLI の認証で接続しています。");
     const cached = loadCache(local.repo);
     if (cached) { state.issues = cached; render(); }
     await refresh({ silent: true });

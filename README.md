@@ -55,14 +55,56 @@ python serve.py
 
 `?demo=1` を付けるとサンプルデータで動作確認できる（GitHub には書き込まない）。
 
-## デプロイ
+## 本番運用（Cloudflare Pages + Access）
 
-静的ファイルをそのまま置けばよい。Cloudflare Pages / GitHub Pages のどちらでも動く。
+PC も iPhone も同じ URL を開くだけで使える構成。`_worker.js` が `serve.py` と同じ 3 つの役割を担う。
 
-- Cloudflare Pages: このディレクトリをそのままアップロード（ビルドコマンド無し、出力ディレクトリ `/`）
-- GitHub Pages: リポジトリの root を公開
+| パス | 役割 |
+|---|---|
+| `/__config` | アプリに「プロキシ経由で繋げる」ことを伝える（repo 名、Gemini の有無） |
+| `/gh/*` | GitHub API へ転送。`TASKS_REPO` 配下のパスだけ許可。トークンは secret |
+| `/ai/tasks` | Gemini でテキストをタスクに整形 |
+| それ以外 | 静的ファイル |
 
-URL は自分だけが知っていればよいが、アプリ自体には秘密情報を含まないので公開されても実害は無い（トークンは各端末のブラウザ内にしか無い）。
+認証は Cloudflare Access（GitHub ログイン、自分のメールアドレスだけ許可）に任せる。アプリ側にはログイン処理を持たない。
+
+### 初回デプロイ
+
+```bash
+wrangler login
+wrangler pages project create gh-task-board --production-branch main
+wrangler pages deploy . --project-name gh-task-board --commit-dirty=true
+```
+
+### secret の登録（値は画面に出さない）
+
+```bash
+# tasks リポの Issues: Read and write だけを持つ fine-grained PAT
+op read "op://<vault>/<item>/<field>" | wrangler pages secret put GITHUB_TOKEN --project-name gh-task-board
+# Gemini API キー
+op read "op://<vault>/<item>/<field>" | wrangler pages secret put GEMINI_API_KEY --project-name gh-task-board
+```
+
+`TASKS_REPO` と `GEMINI_MODEL` は `wrangler.toml` の `[vars]` にある。
+
+### Access（GitHub ログインで自分だけに制限）
+
+wrangler は Zero Trust を扱えないので Cloudflare API（またはダッシュボード）で設定する。
+Application のドメインは `gh-task-board.pages.dev`、Policy は自分のメールアドレス 1 件の allow、
+IdP は GitHub のみ。セッション期間を長め（例: 720h）にすると iPhone で毎回ログインせずに済む。
+
+### 更新
+
+```bash
+wrangler pages deploy . --project-name gh-task-board --commit-dirty=true
+```
+
+secret は保持される。
+
+### 開発・オフライン用
+
+`python serve.py` はそのまま残している（gh CLI の認証、Gemini は環境変数）。
+GitHub Pages 版（PAT をブラウザに入れる方式）はプロキシが無い環境向けのフォールバックとして動く。
 
 ## ファイル構成
 
@@ -71,6 +113,9 @@ index.html            画面
 style.css             スタイル（ライト / ダーク）
 app.js                状態管理・描画・ドラッグ&ドロップ・ダイアログ
 api.js                GitHub REST API ラッパー（+ デモ用のメモリ実装）
+_worker.js            Cloudflare Pages Functions（GitHub 代行・Gemini 整形）
+wrangler.toml         Pages 設定（vars。secret は含めない）
+serve.py              PC ローカル用サーバー（同じ役割を Python で）
 sw.js                 Service Worker（アプリシェルのキャッシュ）
 manifest.webmanifest  PWA マニフェスト
 icons/                アイコン

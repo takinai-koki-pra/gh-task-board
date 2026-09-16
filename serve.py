@@ -161,7 +161,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path == "/__local":
+        if self.path == "/__config":
             return self._json(200, {"repo": REPO, "ai": bool(GEMINI_KEY)})
         if self.path.startswith("/gh/"):
             return self._proxy()

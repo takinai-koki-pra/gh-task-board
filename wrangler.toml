@@ -1,0 +1,12 @@
+name = "gh-task-board"
+pages_build_output_dir = "."
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+TASKS_REPO = "takinai-koki-pra/tasks"
+GEMINI_MODEL = "gemini-3.8-flash"
+
+# secrets（wrangler pages secret put で登録、ここには書かない）:
+#   GITHUB_TOKEN   … tasks リポの Issues: Read and write を持つ fine-grained PAT
+#   GEMINI_API_KEY … Gemini API キー
