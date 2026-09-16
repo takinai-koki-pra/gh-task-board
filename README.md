@@ -78,20 +78,30 @@ wrangler pages deploy . --project-name gh-task-board --commit-dirty=true
 
 ### secret の登録（値は画面に出さない）
 
+秘密の値は 1Password（vault `個人API Key`）を正本にし、`op read` で流し込む。vault 名に日本語が含まれると
+`op://` 参照に使えないので、vault は ID（`khhtmawmi6te3i64k3s34jne44`）で指定する。
+
+| 項目 | 1Password のタイトル | 用途 |
+|---|---|---|
+| `gh-task-board` | fine-grained PAT（`takinai-koki-pra/tasks` のみ、Issues: Read and write） | Worker の `GITHUB_TOKEN` |
+| `Gemini API` | Gemini API キー | Worker の `GEMINI_API_KEY` |
+| `ai-agent-access` | Cloudflare API トークン（Access 編集・Pages 編集） | Access 設定・CI 用 |
+
 ```bash
-# tasks リポの Issues: Read and write だけを持つ fine-grained PAT
-op read "op://<vault>/<item>/<field>" | wrangler pages secret put GITHUB_TOKEN --project-name gh-task-board
-# Gemini API キー
-op read "op://<vault>/<item>/<field>" | wrangler pages secret put GEMINI_API_KEY --project-name gh-task-board
+op read "op://khhtmawmi6te3i64k3s34jne44/gh-task-board/credential" | wrangler pages secret put GITHUB_TOKEN --project-name gh-task-board
+op read "op://khhtmawmi6te3i64k3s34jne44/Gemini API/credential"     | wrangler pages secret put GEMINI_API_KEY --project-name gh-task-board
 ```
 
+secret は **次のデプロイから有効**になるので、登録後に `wrangler pages deploy` を一度実行する。
 `TASKS_REPO` と `GEMINI_MODEL` は `wrangler.toml` の `[vars]` にある。
 
 ### Access（GitHub ログインで自分だけに制限）
 
-wrangler は Zero Trust を扱えないので Cloudflare API（またはダッシュボード）で設定する。
-Application のドメインは `gh-task-board.pages.dev`、Policy は自分のメールアドレス 1 件の allow、
-IdP は GitHub のみ。セッション期間を長め（例: 720h）にすると iPhone で毎回ログインせずに済む。
+wrangler は Zero Trust を扱えないので Cloudflare API で設定した（トークンは `ai-agent-access`）。
+
+- Application「Task Board」: `gh-task-board.pages.dev` と `*.gh-task-board.pages.dev`（プレビュー URL も保護）
+- Policy `gh-task-board-owner`: allow = 自分のメールアドレス 1 件、require = GitHub IdP でのログイン
+- IdP は既存の GitHub のみ、自動リダイレクト、セッション 720h（iPhone で毎回ログインしないため）
 
 ### 更新
 
