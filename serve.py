@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import webbrowser
@@ -45,7 +46,7 @@ AI_PROMPT = """あなたはタスク整理アシスタントです。ユーザ�
 --- テキスト ---
 """
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 GEMINI_SCHEMA = {
     "type": "ARRAY",
     "items": {
@@ -89,15 +90,21 @@ def ai_tasks(text: str):
         url, data=json.dumps(payload).encode(), method="POST",
         headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
     )
-    try:
-        with urllib.request.urlopen(req, timeout=60) as res:
-            data = json.loads(res.read())
-    except urllib.error.HTTPError as e:
+    data = None
+    for attempt in range(3):  # 429 / 503（混雑）は少し待って再試行
         try:
-            msg = json.loads(e.read()).get("error", {}).get("message", "")
-        except Exception:  # noqa: BLE001
-            msg = ""
-        raise RuntimeError(f"Gemini API {e.code}: {msg or e.reason}") from None
+            with urllib.request.urlopen(req, timeout=60) as res:
+                data = json.loads(res.read())
+            break
+        except urllib.error.HTTPError as e:
+            try:
+                msg = json.loads(e.read()).get("error", {}).get("message", "")
+            except Exception:  # noqa: BLE001
+                msg = ""
+            if e.code in (429, 503) and attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise RuntimeError(f"Gemini API {e.code}: {msg or e.reason}") from None
     parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
     raw = "".join(p.get("text", "") for p in parts)
     tasks = json.loads(raw or "[]")

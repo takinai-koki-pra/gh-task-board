@@ -47,7 +47,7 @@ python serve.py
 
 ブラウザが `http://127.0.0.1:8790/` で開く。既定のリポジトリは `takinai-koki-pra/tasks`。変えるときは `python serve.py owner/repo`。
 `serve.py` は静的ファイル配信に加え、`/gh/...` を `gh auth token` 付きで api.github.com へ転送する。
-「まとめて追加」の整形には Gemini API（既定 `gemini-3.6-flash`、`GEMINI_MODEL` で変更可）を使う。キーは次のどちらかで渡す。
+「まとめて追加」の整形には Gemini API（既定 `gemini-3.8-flash`、`GEMINI_MODEL` で変更可）を使う。キーは次のどちらかで渡す。
 
 - 環境変数 `GEMINI_API_KEY`
 - 1Password に入れている場合: `GEMINI_API_KEY_OP=op://<vault>/<item>/<field>` を設定しておくと起動時に `op read` で解決する。
