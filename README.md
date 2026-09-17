@@ -3,6 +3,11 @@
 GitHub Issues をカンバンで操作する個人用タスクボード。Web と iOS（PWA・ホーム画面追加）で動く。
 ビルド不要の静的サイト（HTML / CSS / ES modules）で、ブラウザから GitHub REST API を直接呼ぶ。バックエンドは無い。
 
+## 設計
+
+データモデルと設計思想は [docs/data-model.md](docs/data-model.md) にまとめている。
+タスク = 1 Issue、列は `status:*` ラベル、案件・優先度・次に動く主体はラベルの名前空間、期限・再浮上日・元の文脈は本文先頭の `task` ブロック、履歴はコメント。UI はこの文書に従属する。
+
 ## 仕組み
 
 | 列 | GitHub 上の状態 |
