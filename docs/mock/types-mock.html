@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>4 つの型 — Task Board モック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" />
+<style>
+  :root {
+    --bg: #f5f5f7; --side: #f0f0f3; --cell: #ffffff; --hover: #f5f5f7; --sel: #ececef; --sel2: #e3e3e8;
+    --ink: #1d1d1f; --ink2: #6e6e73; --ink3: #b0b0b5; --sep: rgba(60,60,67,.14); --sep2: rgba(60,60,67,.24);
+    --accent: #1d1d1f; --red: #e5484d; --purple: #7c5cff; --amber: #c77d00; --amber-bg: #fff7e6; --amber-bd: #f0d9a8; --green: #2e9e5b;
+    --font: "Inter", "Noto Sans JP", system-ui, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px 28px 80px; background: #e4e4e8; color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; font-feature-settings: "tnum"; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .lead { color: var(--ink2); font-size: 13px; margin: 0 0 24px; max-width: 1000px; line-height: 1.6; }
+  .cap { font-size: 12.5px; color: var(--ink2); margin: 10px 0 40px 2px; max-width: 1120px; line-height: 1.65; }
+  .cap b { color: var(--ink); }
+  svg { width: 20px; height: 20px; fill: currentColor; flex: none; display: inline-block; vertical-align: middle; }
+  i[data-icon] { display: inline-flex; width: 20px; height: 20px; }
+  i[data-icon].s { width: 14px; height: 14px; } i[data-icon].s svg { width: 14px; height: 14px; }
+  i[data-icon].m { width: 16px; height: 16px; } i[data-icon].m svg { width: 16px; height: 16px; }
+  kbd { font-family: var(--mono); font-size: 11px; color: var(--ink2); border: 1px solid var(--sep2); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fff; line-height: 16px; display: inline-block; }
+  .win { width: 1120px; height: 700px; background: var(--cell); border-radius: 10px; border: 1px solid var(--sep2); overflow: hidden; position: relative; box-shadow: 0 24px 60px -30px rgba(0,0,0,.45); display: grid; }
+  .pri { color: var(--red); font-weight: 700; margin-right: 3px; }
+  .tag { color: var(--ink2); font-weight: 400; font-size: 12.5px; margin-left: 7px; }
+  .ai { color: var(--purple); } .wait { color: var(--amber); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ===== 共通サイドバー（Linear 風の狭いもの） ===== */
+  .side { background: var(--side); border-right: 1px solid var(--sep); padding: 12px 8px; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+  .side .app { font-size: 12px; color: var(--ink2); padding: 4px 8px 10px; display: flex; justify-content: space-between; align-items: center; }
+  .side .it { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 6px; }
+  .side .it i { color: var(--ink2); }
+  .side .it.on { background: var(--sel2); }
+  .side .it .n { margin-left: auto; color: var(--ink2); font-size: 12px; }
+  .side .grp { font-size: 11px; font-weight: 600; color: var(--ink2); letter-spacing: .04em; text-transform: uppercase; padding: 14px 8px 4px; }
+  .side .foot { margin-top: auto; padding: 8px 8px 0; color: var(--ink2); font-size: 11.5px; display: flex; gap: 8px; align-items: center; }
+
+  /* ===== A: Linear 型 ===== */
+  #A { grid-template-columns: 208px 1fr 340px; }
+  #A .main { display: flex; flex-direction: column; min-width: 0; }
+  .hdr { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--sep); }
+  .hdr h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .tabs { display: flex; gap: 2px; margin-left: 14px; }
+  .tabs span { padding: 4px 10px; border-radius: 6px; font-size: 13px; color: var(--ink2); }
+  .tabs span.on { background: var(--sel); color: var(--ink); font-weight: 500; }
+  .tabs span .n { margin-left: 5px; color: var(--ink3); }
+  .hdr .tools { display: flex; gap: 6px; color: var(--ink2); align-items: center; font-size: 12.5px; }
+  .hdr .tools .ib { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; }
+  .dense { flex: 1; overflow: auto; }
+  .sech { font-size: 11.5px; font-weight: 600; color: var(--ink2); padding: 10px 18px 4px; background: var(--cell); }
+  .drow { display: grid; grid-template-columns: 18px 44px 1fr auto auto; gap: 12px; align-items: center; height: 38px; padding: 0 18px; border-top: 1px solid var(--sep); font-size: 13.5px; }
+  .drow:hover { background: var(--hover); }
+  .drow.on { background: var(--sel); }
+  .drow > i { color: var(--ink3); }
+  .drow .id { font-family: var(--mono); font-size: 11.5px; color: var(--ink3); }
+  .drow .t { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drow .t .from { color: var(--ink2); font-weight: 400; margin-left: 8px; font-size: 12.5px; display: inline-flex; gap: 4px; align-items: center; }
+  .drow .props { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink2); }
+  .drow .props span { display: inline-flex; gap: 4px; align-items: center; padding: 2px 7px; border: 1px solid var(--sep); border-radius: 5px; }
+  .drow .keys { display: flex; gap: 3px; opacity: 0; }
+  .drow.on .keys { opacity: 1; }
+  .drow.dim { opacity: .55; }
+  .panel { border-left: 1px solid var(--sep); background: var(--cell); padding: 16px 18px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+  .panel .id { font-family: var(--mono); font-size: 11.5px; color: var(--ink3); display: flex; justify-content: space-between; }
+  .panel h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.35; }
+  .panel .quote { border-left: 2px solid var(--sep2); padding: 6px 10px; color: var(--ink2); font-size: 13px; background: var(--bg); border-radius: 0 6px 6px 0; }
+  .panel .quote .who { font-size: 11.5px; color: var(--ink3); margin-bottom: 2px; }
+  .prop { display: grid; grid-template-columns: 84px 1fr; gap: 6px 10px; font-size: 13px; align-items: center; }
+  .prop .k { color: var(--ink2); font-size: 12.5px; }
+  .prop .v { display: inline-flex; gap: 6px; align-items: center; height: 26px; padding: 0 8px; border: 1px solid var(--sep2); border-radius: 6px; width: fit-content; }
+  .prop .v.empty { color: var(--ink3); border-style: dashed; }
+  .acts { border-top: 1px solid var(--sep); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .acts div { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; border-radius: 6px; }
+  .acts div.pri2 { background: var(--accent); color: #fff; } .acts div.pri2 kbd { background: #333; border-color: #555; color: #ddd; }
+  .acts div:not(.pri2):hover { background: var(--hover); }
+  .status { position: absolute; left: 208px; right: 340px; bottom: 0; height: 30px; border-top: 1px solid var(--sep); background: var(--bg); display: flex; align-items: center; gap: 14px; padding: 0 18px; font-size: 11.5px; color: var(--ink2); }
+
+  /* ===== B: 日次計画型 ===== */
+  #B { grid-template-columns: 208px 1fr 300px; }
+  #B .main { display: flex; flex-direction: column; min-width: 0; }
+  .ritual { display: flex; align-items: center; gap: 18px; padding: 14px 24px; border-bottom: 1px solid var(--sep); background: var(--bg); }
+  .ritual .step { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink3); }
+  .ritual .step .b { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--sep2); display: grid; place-items: center; font-size: 11px; }
+  .ritual .step.done { color: var(--ink2); } .ritual .step.done .b { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .ritual .step.on { color: var(--ink); font-weight: 600; } .ritual .step.on .b { border-color: var(--ink); }
+  .ritual .sum { margin-left: auto; font-size: 12.5px; color: var(--ink2); }
+  .ritual .sum b { color: var(--ink); font-weight: 600; }
+  .plan { flex: 1; overflow: auto; padding: 14px 24px; }
+  .plan h2 { margin: 6px 0 2px; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .plan .sub { color: var(--ink2); font-size: 12.5px; margin-bottom: 12px; }
+  .prow { display: grid; grid-template-columns: 22px 1fr auto auto; gap: 12px; align-items: center; padding: 10px 10px; margin: 0 -10px; border-radius: 8px; border-top: 1px solid var(--sep); }
+  .prow:first-of-type { border-top: 0; }
+  .prow > i { color: var(--ink3); }
+  .prow .t { font-size: 14.5px; font-weight: 500; }
+  .prow .m { font-size: 12px; color: var(--ink2); margin-top: 2px; display: flex; gap: 10px; } .prow .m span { display: inline-flex; gap: 4px; align-items: center; }
+  .est { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--sep2); font-size: 12px; color: var(--ink); font-family: var(--mono); }
+  .est.empty { color: var(--ink3); border-style: dashed; }
+  .prow .grip { color: var(--ink3); }
+  .prow.ghost { border: 1.5px dashed var(--sep2); border-radius: 8px; color: var(--ink3); justify-content: center; grid-template-columns: 1fr; text-align: center; font-size: 13px; padding: 14px; margin-top: 8px; }
+  .shelf { border-left: 1px solid var(--sep); background: var(--side); padding: 14px 14px; overflow: auto; }
+  .shelf h4 { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; color: var(--ink2); display: flex; justify-content: space-between; }
+  .chip-row { display: flex; align-items: center; gap: 8px; background: var(--cell); border: 1px solid var(--sep); border-radius: 7px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; }
+  .chip-row i { color: var(--ink3); }
+  .chip-row .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip-row .est { height: 20px; font-size: 11px; }
+  .shelf .tl { margin-top: 16px; border-top: 1px solid var(--sep); padding-top: 12px; }
+  .tl .hr { display: grid; grid-template-columns: 38px 1fr; gap: 8px; height: 34px; font-size: 11px; color: var(--ink3); font-family: var(--mono); border-top: 1px solid var(--sep); align-items: start; padding-top: 2px; }
+  .tl .blk { background: var(--cell); border: 1px solid var(--sep2); border-left: 3px solid var(--accent); border-radius: 5px; font-size: 11.5px; color: var(--ink); padding: 3px 7px; font-family: var(--font); }
+  .tl .blk.mtg { background: #ececef; border-left-color: var(--ink3); color: var(--ink2); }
+
+  /* ===== C: AI 自動配置型 ===== */
+  #C { grid-template-columns: 208px 360px 1fr; }
+  .tasks { border-right: 1px solid var(--sep); display: flex; flex-direction: column; }
+  .tasks .hdr h2 { font-size: 14px; }
+  .trow { display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--sep); font-size: 13.5px; }
+  .trow > i { color: var(--ink3); margin-top: 2px; }
+  .trow .t { font-weight: 500; }
+  .trow .m { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+  .trow .m span { display: inline-flex; gap: 4px; align-items: center; font-size: 11.5px; color: var(--ink2); border: 1px solid var(--sep); border-radius: 5px; padding: 1px 6px; font-family: var(--mono); }
+  .trow .m span.auto { color: var(--ink); border-color: var(--sep2); }
+  .trow .m span.ai { color: var(--purple); font-family: var(--font); }
+  .cal { display: flex; flex-direction: column; min-width: 0; }
+  .banner { display: flex; align-items: center; gap: 10px; margin: 12px 18px 0; padding: 9px 12px; border-radius: 8px; background: var(--bg); border: 1px solid var(--sep); font-size: 13px; }
+  .banner i { color: var(--ink2); }
+  .banner .u { margin-left: auto; color: var(--ink); font-weight: 500; display: inline-flex; gap: 6px; align-items: center; }
+  .day { flex: 1; overflow: auto; padding: 8px 18px 16px; }
+  .day .dh { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0 8px; }
+  .day .dh h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .day .dh span { font-size: 12.5px; color: var(--ink2); }
+  .hours { position: relative; display: grid; grid-template-columns: 44px 1fr; }
+  .hours .h { height: 52px; border-top: 1px solid var(--sep); font-size: 11px; color: var(--ink3); font-family: var(--mono); padding-top: 3px; }
+  .hours .lane { position: relative; border-top: 1px solid var(--sep); }
+  .ev { position: absolute; left: 6px; right: 6px; border-radius: 6px; padding: 5px 9px; font-size: 12.5px; border: 1px solid var(--sep2); background: var(--cell); }
+  .ev .m { font-size: 11px; color: var(--ink2); margin-top: 1px; display: flex; gap: 8px; }
+  .ev.mtg { background: #ececef; color: var(--ink2); border-color: transparent; }
+  .ev.task { border-left: 3px solid var(--accent); }
+  .ev.focus { background: repeating-linear-gradient(135deg, #fff 0 6px, #f3f3f5 6px 12px); color: var(--ink2); border-style: dashed; }
+  .ev.moved { border-left-color: var(--ink3); opacity: .6; }
+  .ev .auto { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); margin-left: 6px; }
+  .nowline { position: absolute; left: 44px; right: 0; height: 1px; background: var(--red); }
+  .nowline::before { content: ""; position: absolute; left: -4px; top: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+
+  /* ===== D: 美しさ + 会話型 ===== */
+  #D { grid-template-columns: 1fr 380px; background: #fafafa; }
+  .feed { padding: 28px 36px; overflow: auto; }
+  .feed h2 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.025em; font-variation-settings: "opsz" 32; }
+  .feed .sub { color: var(--ink2); font-size: 13px; margin: 4px 0 18px; }
+  .card { display: grid; grid-template-columns: 26px 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px -18px rgba(0,0,0,.25); margin-bottom: 10px; }
+  .card > i { color: var(--ink3); } .card > i svg { width: 26px; height: 26px; }
+  .card .t { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .card .m { font-size: 12.5px; color: var(--ink2); margin-top: 3px; display: flex; gap: 10px; } .card .m span { display: inline-flex; gap: 4px; align-items: center; }
+  .card .r { display: flex; gap: 6px; }
+  .card .r span { font-size: 12px; color: var(--ink2); padding: 4px 9px; border-radius: 999px; background: var(--bg); }
+  .card.tint-a { background: #f3f6ff; } .card.tint-b { background: #f4fbf6; } .card.tint-c { background: #fff8ee; }
+  .card.done > i { color: var(--accent); } .card.done .t { color: var(--ink3); text-decoration: line-through; }
+  .card.done { transform: scale(.985); opacity: .75; }
+  .tline { display: flex; align-items: center; gap: 10px; color: var(--ink3); font-size: 11.5px; font-family: var(--mono); margin: 14px 0 8px; }
+  .tline::after { content: ""; flex: 1; height: 1px; background: var(--sep); }
+  .chat { border-left: 1px solid var(--sep); background: #fff; display: flex; flex-direction: column; }
+  .chat .ch { padding: 14px 18px; border-bottom: 1px solid var(--sep); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .chat .log { flex: 1; overflow: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; }
+  .msg { max-width: 92%; padding: 9px 12px; border-radius: 12px; line-height: 1.5; }
+  .msg.me { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--bg); border-bottom-left-radius: 4px; }
+  .msg .op { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .msg .op span { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: #fff; border: 1px solid var(--sep2); color: var(--ink); }
+  .msg .op span.u { color: var(--ink2); border-style: dashed; }
+  .chat .in { margin: 12px 14px 16px; border: 1px solid var(--sep2); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 13.5px; box-shadow: 0 6px 20px -14px rgba(0,0,0,.3); }
+  .chat .in i { color: var(--ink2); }
+  .chat .in .send { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; }
+  .chat .in .send svg { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+<h1>4 つの型 — 同じデータ・同じ書体・同じ配色（B）で、型の差だけを見る</h1>
+<p class="lead">A: キーボード + 受信箱（Linear / Godspeed）、B: 日次計画の儀式（Sunsama / Akiflow）、C: AI 自動配置（Motion / Reclaim）、D: 美しさ + 会話（Amie / Superlist）。データは 9/16 のメモを新モデルに写したもの。</p>
+
+<!-- ============ A ============ -->
+<div class="win" id="A">
+  <aside class="side">
+    <div class="app"><span>tasks</span><span style="display:flex;gap:6px"><i data-icon="magnifying-glass" class="m"></i><i data-icon="gear" class="m"></i></span></div>
+    <div class="it on"><i data-icon="tray"></i>受信箱<span class="n">7</span></div>
+    <div class="it"><i data-icon="sun"></i>今日<span class="n">5</span></div>
+    <div class="it"><i data-icon="hourglass"></i>相手待ち<span class="n">1</span></div>
+    <div class="it"><i data-icon="sparkle"></i>エージェント<span class="n">1</span></div>
+    <div class="it"><i data-icon="moon"></i>後で<span class="n">4</span></div>
+    <div class="it"><i data-icon="kanban"></i>ボード</div>
+    <div class="grp">案件</div>
+    <div class="it"><span class="dot" style="background:#1d1d1f"></span>DBJ<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#6e6e73"></span>信越<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#9a9aa0"></span>JICA<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#c9c9ce"></span>個人・環境<span class="n">6</span></div>
+    <div class="foot"><kbd>Ctrl</kbd>+<kbd>K</kbd> コマンド</div>
+  </aside>
+  <div class="main">
+    <div class="hdr"><div style="display:flex;align-items:center"><h2>受信箱</h2><div class="tabs"><span class="on">対応必須<span class="n">3</span></span><span>その他<span class="n">4</span></span></div></div>
+      <div class="tools"><span>表示</span><div class="ib"><i data-icon="sliders-horizontal" class="m"></i></div></div></div>
+    <div class="dense">
+      <div class="sech">Slack から</div>
+      <div class="drow on"><i data-icon="circle"></i><span class="id">#9</span><span class="t">NDA の Admin 対応を待って進める<span class="from"><i data-icon="slack-logo" class="s"></i>信越 · 田中</span></span><span class="props"><span class="wait"><i data-icon="hourglass" class="s"></i>待ち</span></span><span class="keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></span></div>
+      <div class="drow"><i data-icon="circle"></i><span class="id">#12</span><span class="t">見積の回答を返す<span class="from"><i data-icon="slack-logo" class="s"></i>DBJ · 山田</span></span><span class="props"><span><i data-icon="calendar-blank" class="s"></i>今日</span><span class="pri">!</span></span><span class="keys"></span></div>
+      <div class="sech">貼り付けから</div>
+      <div class="drow"><i data-icon="circle"></i><span class="id">#13</span><span class="t">PC 内フォルダ・ルールを整理する<span class="from"><i data-icon="clipboard-text" class="s"></i>メモ 9/16</span></span><span class="props"><span><i data-icon="check-square" class="s"></i>0/3</span><span class="pri">!</span></span><span class="keys"></span></div>
+      <div class="sech">エージェントから</div>
+      <div class="drow"><i data-icon="circle"></i><span class="id">#8</span><span class="t">スライド作成スキル: 方針案が 3 つ出ました。確認してください<span class="from ai"><i data-icon="sparkle" class="s"></i>manage-task-board · 8 分前</span></span><span class="props"><span class="ai">確認待ち</span></span><span class="keys"></span></div>
+      <div class="sech" style="color:var(--ink3)">その他 4 件は <kbd>Tab</kbd> で</div>
+    </div>
+    <div class="status"><span><kbd>J</kbd><kbd>K</kbd> 移動</span><span><kbd>1</kbd> 今日</span><span><kbd>2</kbd> 後で</span><span><kbd>3</kbd> 相手待ち</span><span><kbd>4</kbd> エージェント</span><span><kbd>E</kbd> 完了</span><span><kbd>Enter</kbd> 開く</span></div>
+  </div>
+  <div class="panel">
+    <div class="id"><span>#9 · 信越</span><span>Slack で開く ↗</span></div>
+    <h3>NDA の Admin 対応を待って進める</h3>
+    <div class="quote"><div class="who">田中 · #shinetsu-nda · 9/16 09:41</div>NDA は法務確認中です。返ってきたら山田さんへ転送お願いします。</div>
+    <div class="prop">
+      <span class="k">状態</span><span class="v"><i data-icon="circle" class="m"></i>Todo</span>
+      <span class="k">次に動く</span><span class="v wait"><i data-icon="hourglass" class="m"></i>相手待ち · Admin</span>
+      <span class="k">期限</span><span class="v empty"><i data-icon="calendar-blank" class="m"></i>なし</span>
+      <span class="k">再表示</span><span class="v"><i data-icon="moon" class="m"></i>9/22 月</span>
+      <span class="k">案件</span><span class="v"><span class="dot" style="background:#6e6e73"></span>信越</span>
+    </div>
+    <div class="acts">
+      <div class="pri2"><span>今日やる</span><kbd>1</kbd></div>
+      <div><span>来週に再表示</span><kbd>2</kbd></div>
+      <div><span>相手待ちのまま</span><kbd>3</kbd></div>
+      <div><span>エージェントに任せる</span><kbd>4</kbd></div>
+      <div><span>完了</span><kbd>E</kbd></div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>A. キーボード + 受信箱（Linear / Godspeed 型）</b>　起動画面は受信箱。Slack・貼り付け・エージェントからの新着が「対応必須 / その他」に自動で分かれ、右パネルで元の文脈を読みながら <kbd>1</kbd>〜<kbd>4</kbd> で仕分ける。行は 38px の高密度、下部に常時キー案内。エージェントの報告も同じ受信箱に「確認待ち」として届く。Linear の Priority inbox と Godspeed の 100% キー操作を個人向けにしたもの。</p>
+
+<!-- ============ B ============ -->
+<div class="win" id="B">
+  <aside class="side">
+    <div class="app"><span>tasks</span><i data-icon="gear" class="m"></i></div>
+    <div class="it on"><i data-icon="sun"></i>今日</div>
+    <div class="it"><i data-icon="calendar-blank"></i>今週</div>
+    <div class="it"><i data-icon="tray"></i>受信箱<span class="n">3</span></div>
+    <div class="it"><i data-icon="moon"></i>後で<span class="n">4</span></div>
+    <div class="grp">儀式</div>
+    <div class="it"><i data-icon="sunrise"></i>朝の計画</div>
+    <div class="it"><i data-icon="sunset"></i>夜の振り返り</div>
+    <div class="foot"><span>週の合計 <b style="color:var(--ink)">18h / 30h</b></span></div>
+  </aside>
+  <div class="main">
+    <div class="ritual">
+      <div class="step done"><span class="b">✓</span>昨日を締める</div>
+      <div class="step done"><span class="b">✓</span>受信箱を空にする</div>
+      <div class="step on"><span class="b">3</span>今日を選ぶ</div>
+      <div class="step"><span class="b">4</span>時間を見積もる</div>
+      <div class="step"><span class="b">5</span>予定表に置く</div>
+      <div class="sum">合計 <b>4h 30m</b> / 目安 6h</div>
+    </div>
+    <div class="plan">
+      <h2>今日</h2>
+      <div class="sub">9月17日 水曜日 · 会議 2 件 · 空き 5h 20m</div>
+      <div class="prow"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>メールを送る<span class="tag">DBJ</span></div><div class="m"><span><i data-icon="calendar-blank" class="s"></i>今日まで</span></div></div><span class="est">30m</span><i data-icon="dots-six-vertical" class="grip"></i></div>
+      <div class="prow"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する<span class="tag">JICA</span></div><div class="m"><span><i data-icon="check-square" class="s"></i>1 / 3</span><span>金曜まで</span></div></div><span class="est">2h</span><i data-icon="dots-six-vertical" class="grip"></i></div>
+      <div class="prow"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する<span class="tag">pc2</span></div><div class="m"><span class="ai"><i data-icon="sparkle" class="s"></i>エージェントの案を確認</span></div></div><span class="est">1h</span><i data-icon="dots-six-vertical" class="grip"></i></div>
+      <div class="prow"><i data-icon="circle"></i><div><div class="t">旧 PC を麹町オフィスへ返却する</div></div><span class="est">1h</span><i data-icon="dots-six-vertical" class="grip"></i></div>
+      <div class="prow"><i data-icon="circle"></i><div><div class="t">PC 内フォルダ・ルールを整理する</div><div class="m"><span><i data-icon="check-square" class="s"></i>0 / 3</span></div></div><span class="est empty">見積</span><i data-icon="dots-six-vertical" class="grip"></i></div>
+      <div class="prow ghost">右の棚からここへドラッグ、または <kbd>A</kbd> で追加</div>
+    </div>
+  </div>
+  <div class="shelf">
+    <h4>棚 <span>後で 4 · 相手待ち 1</span></h4>
+    <div class="chip-row"><i data-icon="circle" class="m"></i><span class="t">Outlook スキルを整理する</span><span class="est">2h</span></div>
+    <div class="chip-row"><i data-icon="circle" class="m"></i><span class="t">UPSIDER スキルを整理する</span><span class="est">2h</span></div>
+    <div class="chip-row"><i data-icon="circle" class="m"></i><span class="t">AI チームダッシュボードの Issue をつぶす</span><span class="est">3h</span></div>
+    <div class="chip-row" style="opacity:.55"><i data-icon="hourglass" class="m"></i><span class="t">NDA の Admin 対応を待って進める</span><span class="est">–</span></div>
+    <div class="tl">
+      <h4>予定表 <span>9/17</span></h4>
+      <div class="hr"><span>9:00</span><div class="blk">メールを送る · 30m</div></div>
+      <div class="hr"><span>10:00</span><div class="blk mtg">DBJ 定例</div></div>
+      <div class="hr"><span>11:00</span><div class="blk">アジェンダ · 2h</div></div>
+      <div class="hr"><span>12:00</span><div></div></div>
+      <div class="hr"><span>13:00</span><div class="blk">アジェンダ（続き）</div></div>
+      <div class="hr"><span>14:00</span><div class="blk mtg">JICA 事前相談</div></div>
+      <div class="hr"><span>15:00</span><div class="blk">スキル更新 · 1h</div></div>
+      <div class="hr"><span>16:00</span><div></div></div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>B. 日次計画の儀式（Sunsama / Akiflow 型）</b>　上部の 5 段ステッパーで毎朝の手順を固定する。中央が「今日やると決めたもの」で、各行に所要時間の見積があり、合計と目安（6h）を常に比べる。右の棚（後で・相手待ち）からドラッグで持ってきて、下の小さな予定表に置く。すべて手動で、意図的に遅い。夜は「振り返り」で残りを明日か棚へ戻す。</p>
+
+<!-- ============ C ============ -->
+<div class="win" id="C">
+  <aside class="side">
+    <div class="app"><span>tasks</span><i data-icon="gear" class="m"></i></div>
+    <div class="it on"><i data-icon="calendar-blank"></i>今日</div>
+    <div class="it"><i data-icon="calendar-dots"></i>今週</div>
+    <div class="it"><i data-icon="tray"></i>受信箱<span class="n">3</span></div>
+    <div class="it"><i data-icon="list-checks"></i>すべてのタスク<span class="n">12</span></div>
+    <div class="grp">ルール</div>
+    <div class="it"><i data-icon="shield-check"></i>集中時間 · 毎日 2h</div>
+    <div class="it"><i data-icon="clock"></i>稼働 9:00–18:00</div>
+    <div class="it"><i data-icon="coffee"></i>昼 12:00–13:00</div>
+    <div class="foot"><i data-icon="sparkle" class="m" style="color:var(--purple)"></i><span>最終再計算 2 分前</span></div>
+  </aside>
+  <div class="tasks">
+    <div class="hdr"><h2>タスク</h2><div class="tools"><span>期限順</span><i data-icon="caret-down" class="s"></i></div></div>
+    <div class="trow"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>メールを送る<span class="tag">DBJ</span></div><div class="m"><span>期限 9/17</span><span>30m</span><span class="auto">9:00 に配置</span></div></div></div>
+    <div class="trow"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する<span class="tag">JICA</span></div><div class="m"><span>期限 9/19</span><span>2h</span><span class="auto">11:00 · 13:00 に分割</span></div></div></div>
+    <div class="trow"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する<span class="tag">pc2</span></div><div class="m"><span>期限 なし</span><span>1h</span><span class="ai"><i data-icon="sparkle" class="s"></i>エージェント待ち · 配置保留</span></div></div></div>
+    <div class="trow"><i data-icon="circle"></i><div><div class="t">旧 PC を麹町オフィスへ返却する</div><div class="m"><span>期限 9/19</span><span>1h</span><span class="auto" style="color:var(--ink3)">明日 10:00 へ移動</span></div></div></div>
+    <div class="trow"><i data-icon="circle"></i><div><div class="t">PC 内フォルダ・ルールを整理する</div><div class="m"><span>期限 なし</span><span>3h</span><span class="auto" style="color:var(--ink3)">金曜 へ移動</span></div></div></div>
+    <div class="trow" style="opacity:.55"><i data-icon="hourglass"></i><div><div class="t">NDA の Admin 対応を待って進める<span class="tag">信越</span></div><div class="m"><span class="wait">相手待ち · 配置しない</span></div></div></div>
+  </div>
+  <div class="cal">
+    <div class="banner"><i data-icon="sparkle" class="m"></i><span>14:00 に JICA 事前相談が入ったため、<b>2 件を明日と金曜へ</b>移動しました。</span><span class="u"><i data-icon="arrow-counter-clockwise" class="m"></i>元に戻す</span></div>
+    <div class="day">
+      <div class="dh"><h2>9月17日 水</h2><span>タスク 3h 30m · 会議 2h · 集中時間 2h</span></div>
+      <div class="hours">
+        <div class="h">9:00</div><div class="lane"><div class="ev task" style="top:2px;height:24px">メールを送る<span class="auto">自動 · 30m</span></div></div>
+        <div class="h">10:00</div><div class="lane"><div class="ev mtg" style="top:2px;height:46px">DBJ 定例<div class="m">Teams</div></div></div>
+        <div class="h">11:00</div><div class="lane"><div class="ev task" style="top:2px;height:46px">事前相談のアジェンダを用意する<span class="auto">自動 · 1/2</span></div></div>
+        <div class="h">12:00</div><div class="lane"><div class="ev focus" style="top:2px;height:46px">昼</div></div>
+        <div class="h">13:00</div><div class="lane"><div class="ev task" style="top:2px;height:46px">事前相談のアジェンダ（続き）<span class="auto">自動 · 2/2</span></div></div>
+        <div class="h">14:00</div><div class="lane"><div class="ev mtg" style="top:2px;height:46px">JICA 事前相談<div class="m">新規 · 麹町</div></div></div>
+        <div class="h">15:00</div><div class="lane"><div class="ev focus" style="top:2px;height:98px">集中時間（保護）<div class="m">ルールにより会議を入れない</div></div></div>
+        <div class="h">16:00</div><div class="lane"></div>
+        <div class="h">17:00</div><div class="lane"><div class="ev task moved" style="top:2px;height:24px">旧 PC の返却 → 明日 10:00<span class="auto">移動</span></div></div>
+        <div class="nowline" style="top:214px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>C. AI 自動配置（Motion / Reclaim 型）</b>　期限と見積を入れると、AI が会議とルール（集中時間・稼働時間）を避けて予定表に置く。会議が増えれば自動で組み直し、上のバナーで「何を動かしたか」を必ず示して Undo を付ける。相手待ちは配置しない。人は「いつやるか」を考えない代わりに、見積を必ず入れる義務を負う。</p>
+
+<!-- ============ D ============ -->
+<div class="win" id="D">
+  <div class="feed">
+    <h2>水曜日</h2>
+    <div class="sub">9月17日 · あと 4 つ · 会議は 2 つ</div>
+    <div class="tline">9:00</div>
+    <div class="card tint-a"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>メールを送る</div><div class="m"><span>DBJ</span><span><i data-icon="clock" class="s"></i>15 分くらい</span></div></div><div class="r"><span>今日</span></div></div>
+    <div class="card"><i data-icon="video-camera"></i><div><div class="t">DBJ 定例</div><div class="m"><span>10:00 – 11:00</span><span>Teams</span></div></div><div class="r"></div></div>
+    <div class="tline">午後</div>
+    <div class="card tint-b"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する</div><div class="m"><span>JICA</span><span><i data-icon="check-square" class="s"></i>1 / 3</span></div></div><div class="r"><span>金曜まで</span></div></div>
+    <div class="card"><i data-icon="users"></i><div><div class="t">JICA 事前相談</div><div class="m"><span>14:00 – 15:00</span><span>麹町</span></div></div><div class="r"></div></div>
+    <div class="card tint-c"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する</div><div class="m"><span class="ai"><i data-icon="sparkle" class="s"></i>案が 3 つ届いています</span></div></div><div class="r"><span>pc2</span></div></div>
+    <div class="tline">いつでも</div>
+    <div class="card"><i data-icon="circle"></i><div><div class="t">旧 PC を麹町オフィスへ返却する</div><div class="m"><span>金曜まで</span></div></div><div class="r"></div></div>
+    <div class="card done"><i data-icon="check-circle"></i><div><div class="t">Task Board の動作確認</div></div><div class="r"><span>10:02</span></div></div>
+  </div>
+  <div class="chat">
+    <div class="ch"><i data-icon="sparkle" style="color:var(--purple)"></i>アシスタント</div>
+    <div class="log">
+      <div class="msg bot">おはようございます。今日は会議が 2 つ、タスクは 4 つです。午前にメール、午後にアジェンダを入れると収まります。</div>
+      <div class="msg me">NDA のやつ、Admin から返事きたから山田さんに転送で。来週の月曜まででいい</div>
+      <div class="msg bot">「NDA の Admin 対応を待って進める」を更新しました。<div class="op"><span>相手待ち → 自分</span><span>期限 9/22 月</span><span>タイトル: 山田さんへ NDA を転送する</span><span class="u">元に戻す</span></div></div>
+      <div class="msg me">田中さんの昨日のメッセージからタスク拾って</div>
+      <div class="msg bot">Slack の #shinetsu-nda から 1 件見つけました。追加しますか？<div class="op"><span>見積の回答を返す · DBJ · 今日</span><span>追加</span><span class="u">やめる</span></div></div>
+    </div>
+    <div class="in"><i data-icon="sparkle" class="m"></i>話しかける、または貼り付け…<span class="send"><i data-icon="arrow-up"></i></span></div>
+  </div>
+</div>
+<p class="cap"><b>D. 美しさ + 会話（Amie / Superlist 型）</b>　左は今日の流れ。予定とタスクが同じ時間軸に並び、カードは大きく、種類ごとに淡い色。完了はカードが少し縮んで薄くなる。右は常駐のアシスタント。自然言語で「転送で。月曜まで」と言えば、変更内容をチップで示して元に戻せる。Slack からの拾い上げも会話で頼む。すべての操作が「話す」で済む代わりに、一覧の密度と速度は落ちる。</p>
+
+<script>
+  const BASE = "https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1/assets/light/";
+  const cache = new Map();
+  const load = (n) => { if (!cache.has(n)) cache.set(n, fetch(`${BASE}${n}-light.svg`).then((r) => (r.ok ? r.text() : "")).then((s) => s.replace(/\s(width|height)="[^"]*"/g, "")).catch(() => "")); return cache.get(n); };
+  document.querySelectorAll("i[data-icon]").forEach(async (el) => { el.innerHTML = await load(el.dataset.icon); });
+</script>
+</body>
+</html>
