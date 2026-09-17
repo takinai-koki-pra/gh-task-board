@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task Board UI モック</title>
+<link rel="stylesheet" href="../../style.css" />
+<style>
+  /* モック用の枠。アプリ本体の見た目は style.css をそのまま使う */
+  html, body { height: auto; }
+  body { display: block; padding: 28px 24px 60px; background: var(--paper-2); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .lead { color: var(--ink-2); font-size: 13px; margin: 0 0 22px; }
+  .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 36px; }
+  .frame { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px -18px rgba(0,0,0,.4); }
+  .frame--phone { width: 375px; height: 720px; display: flex; flex-direction: column; }
+  .frame--desk { width: 980px; height: 560px; display: flex; flex-direction: column; }
+  .row > div:has(.frame--phone) { width: 375px; }
+  .row > div:has(.frame--desk) { width: 980px; }
+  .caption { font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0 4px; line-height: 1.5; }
+  .caption b { color: var(--ink); }
+  .frame .topbar { padding: 12px 14px 10px; position: static; }
+  .frame .quickadd { margin-top: auto; }
+
+  /* ---- タブ ---- */
+  .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 13px; }
+  .tabs span { padding: 4px 10px; color: var(--ink-2); }
+  .tabs span.on { background: var(--ink); color: var(--paper); }
+
+  /* ---- Today リスト ---- */
+  .today { flex: 1; overflow-y: auto; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .sec { display: flex; align-items: baseline; gap: 8px; margin: 10px 2px 2px; font-size: 12.5px; font-weight: 700; color: var(--ink-2); letter-spacing: .02em; }
+  .sec small { font-weight: 400; color: var(--ink-3); }
+  .fold { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px dashed var(--line); border-radius: 6px; color: var(--ink-2); font-size: 13px; }
+  .fold::before { content: "▸"; color: var(--ink-3); }
+  .fold .n { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+
+  /* ---- 新しいカード 1 行 ---- */
+  .rowcard { display: grid; grid-template-columns: 8px 1fr auto; gap: 10px; align-items: center;
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px 9px 10px; }
+  .rowcard .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dotc, var(--col-backlog)); }
+  .rowcard .main { min-width: 0; }
+  .rowcard .t { font-weight: 500; overflow-wrap: anywhere; line-height: 1.35; }
+  .rowcard .sub { display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+  .rowcard .right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+  .rowcard .due.over { color: var(--danger); font-weight: 500; }
+  .rowcard .due.today { color: var(--ink); font-weight: 500; }
+  .rowcard.is-waiting { opacity: .55; }
+  .star { color: #dc2626; font-size: 12px; }
+  .agent { color: #7c3aed; font-size: 11px; font-weight: 700; }
+  .chip--client { --chip: #16a34a; }
+  .chip--ctx { --chip: #6b7280; }
+  .chip--wait { --chip: #9ca3af; }
+  .chip--agent { --chip: #7c3aed; }
+  .prog { display: inline-flex; align-items: center; gap: 4px; }
+  .prog i { display: inline-block; width: 28px; height: 4px; border-radius: 2px; background: var(--paper-3); position: relative; overflow: hidden; }
+  .prog i::after { content: ""; position: absolute; inset: 0; width: var(--p, 33%); background: var(--col-done); }
+  .swipe { position: relative; }
+  .swipe .hint { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; pointer-events: none; border-radius: 6px; overflow: hidden; opacity: .9; }
+  .swipe .hint span { display: flex; align-items: center; font-size: 12px; font-weight: 700; padding: 0 12px; }
+  .swipe .hint .l { background: color-mix(in srgb, var(--col-done) 25%, var(--card)); color: var(--col-done); }
+  .swipe .hint .r { background: color-mix(in srgb, var(--col-todo) 18%, var(--card)); color: var(--col-todo); justify-content: flex-end; }
+  .swipe .rowcard { transform: translateX(64px); }
+
+  /* ---- 仕分け ---- */
+  .triage { flex: 1; display: flex; flex-direction: column; padding: 14px 16px 16px; }
+  .triage .prog-txt { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); display: flex; justify-content: space-between; }
+  .triage .bar { height: 3px; background: var(--paper-3); border-radius: 2px; margin: 6px 0 22px; position: relative; }
+  .triage .bar::after { content: ""; position: absolute; inset: 0; width: 43%; background: var(--ink); border-radius: 2px; }
+  .tcard { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 16px 14px; flex: 1; }
+  .tcard .t { font-size: 17px; font-weight: 700; line-height: 1.4; }
+  .tcard .meta { display: flex; gap: 6px; align-items: center; margin: 10px 0 14px; flex-wrap: wrap; }
+  .tcard .src { font-size: 12px; color: var(--ink-3); margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .check { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+  .check li { display: flex; gap: 8px; align-items: center; }
+  .check li::before { content: ""; width: 15px; height: 15px; border: 1.5px solid var(--ink-3); border-radius: 4px; flex: none; }
+  .check li.done { color: var(--ink-3); text-decoration: line-through; }
+  .check li.done::before { background: var(--col-done); border-color: var(--col-done); }
+  .tbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .tbtn { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 12px 8px; text-align: center; font-size: 14px; font-weight: 700; }
+  .tbtn small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-3); margin-top: 2px; font-family: var(--font-mono); }
+  .tbtn.pri { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .tbtn.pri small { color: color-mix(in srgb, var(--paper) 65%, transparent); }
+  .tsub { display: flex; justify-content: space-between; margin-top: 10px; font-size: 13px; color: var(--ink-2); padding: 0 4px; }
+
+  /* ---- ボード（デスクトップ） ---- */
+  .frame--desk .board { padding: 12px 14px; grid-auto-columns: minmax(200px, 1fr); }
+  .frame--desk .column__list { gap: 6px; }
+  .frame--desk .rowcard { padding: 8px 9px; }
+  .col-hidden { font-size: 12px; color: var(--ink-3); text-align: center; padding: 8px; border: 1px dashed var(--line); border-radius: 6px; }
+
+  /* ---- 詳細 ---- */
+  .detail { flex: 1; overflow-y: auto; padding: 14px 16px 16px; }
+  .detail .hd { display: flex; justify-content: space-between; align-items: center; color: var(--ink-3); font-size: 12px; margin-bottom: 8px; }
+  .detail .title { font-size: 17px; font-weight: 700; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--card); }
+  .kv { display: grid; grid-template-columns: 56px 1fr; gap: 8px 10px; align-items: center; margin: 12px 0; font-size: 14px; }
+  .kv label { font-size: 12.5px; color: var(--ink-2); }
+  .kv .in { border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; background: var(--card); min-height: 32px; font-size: 14px; }
+  .kv .in.muted { color: var(--ink-3); }
+  .kv .in.mono { font-family: var(--font-mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pick { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pick .chip { padding: 5px 9px; font-size: 12px; }
+  .pick .chip.off { opacity: .45; border-style: dashed; background: none; }
+  .lbl { font-size: 12.5px; color: var(--ink-2); margin: 12px 0 6px; }
+  .cmt { border-left: 2px solid var(--line); padding: 4px 10px; margin: 6px 0; font-size: 13px; }
+  .cmt .who { font-size: 11.5px; color: var(--ink-3); font-family: var(--font-mono); }
+  .cmt.bot .who { color: #7c3aed; }
+  .cmt-in { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; color: var(--ink-3); font-size: 13px; background: var(--card); margin-top: 8px; }
+  .memo { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 13.5px; background: var(--card); min-height: 44px; }
+</style>
+</head>
+<body>
+
+<h1>Task Board UI モック</h1>
+<p class="lead">案 A（Today + ボード）と案 D（1 枚ずつ仕分け）。配色・部品はアプリ本体の style.css をそのまま使用。データは 9/16 のメモを新モデルに写したもの。</p>
+
+<div class="row">
+
+  <!-- ===== 1. Today（iPhone） ===== -->
+  <div>
+    <div class="frame frame--phone">
+      <header class="topbar">
+        <div class="topbar__brand"><span class="tabs"><span class="on">Today</span><span>ボード</span></span></div>
+        <div class="topbar__actions">
+          <button class="iconbtn" type="button" aria-label="仕分け" title="仕分け"><svg viewBox="0 0 20 20" width="18" height="18"><path d="M4 5h12M4 10h8M4 15h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+          <button class="iconbtn" type="button" aria-label="設定"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+        </div>
+      </header>
+      <div class="today">
+        <div class="sec">進行中 <small>2</small></div>
+        <div class="rowcard" style="--dotc: var(--col-doing)">
+          <span class="dot"></span>
+          <div class="main"><div class="t">事前相談のアジェンダを用意する</div>
+            <div class="sub"><span class="chip chip--client">jica</span></div></div>
+          <div class="right"><span class="prog"><i style="--p:33%"></i>1/3</span></div>
+        </div>
+        <div class="rowcard" style="--dotc: var(--col-doing)">
+          <span class="dot"></span>
+          <div class="main"><div class="t">スライド作成スキルを更新する</div>
+            <div class="sub"><span class="chip chip--ctx">pc2</span></div></div>
+          <div class="right"><span class="star">★</span></div>
+        </div>
+
+        <div class="sec">今日やる <small>due 到来・★</small></div>
+        <div class="swipe">
+          <div class="hint"><span class="l">✓ 完了</span><span class="r">来週 →</span></div>
+          <div class="rowcard" style="--dotc: var(--col-todo)">
+            <span class="dot"></span>
+            <div class="main"><div class="t">メールを送る</div>
+              <div class="sub"><span class="chip chip--client">dbj</span></div></div>
+            <div class="right"><span class="star">★</span><span class="due today">9/17</span></div>
+          </div>
+        </div>
+        <div class="rowcard" style="--dotc: var(--col-todo)">
+          <span class="dot"></span>
+          <div class="main"><div class="t">旧 PC を麹町オフィスへ返却する</div></div>
+          <div class="right"><span class="due">9/19</span></div>
+        </div>
+        <div class="rowcard" style="--dotc: var(--col-backlog)">
+          <span class="dot"></span>
+          <div class="main"><div class="t">PC 内フォルダ・ルールを整理する</div></div>
+          <div class="right"><span class="star">★</span><span class="prog"><i style="--p:0%"></i>0/3</span></div>
+        </div>
+
+        <div class="fold">相手待ち <span class="n">1</span></div>
+        <div class="fold">エージェント待ち <span class="n">0</span></div>
+        <div class="fold">後で（wake 未到来・Backlog） <span class="n">4</span></div>
+      </div>
+      <form class="quickadd"><input type="text" placeholder="タスクを追加…" /><button type="button" class="btn btn--primary">追加</button></form>
+    </div>
+    <div class="caption"><b>1. Today（既定画面）</b>　開いた状態は上 2 セクションだけ。左スワイプで完了、右スワイプで「来週」（wake +7 日）。</div>
+  </div>
+
+  <!-- ===== 2. 仕分け（iPhone） ===== -->
+  <div>
+    <div class="frame frame--phone">
+      <header class="topbar">
+        <div class="topbar__brand"><b style="font-size:14px">仕分け</b></div>
+        <div class="topbar__actions"><button class="iconbtn" type="button" aria-label="閉じる">✕</button></div>
+      </header>
+      <div class="triage">
+        <div class="prog-txt"><span>未整理</span><span>3 / 7</span></div>
+        <div class="bar"></div>
+        <div class="tcard">
+          <div class="t">PC 内フォルダ・ルールを整理する</div>
+          <div class="meta"><span class="star">★</span><span class="chip">Backlog</span><span class="chip chip--ctx">pc2</span></div>
+          <ul class="check">
+            <li>メールルール整理（特に SharePoint 周り）</li>
+            <li>今週分利用</li>
+            <li>目視確認</li>
+          </ul>
+          <div class="src">source: メモ 9/16（貼り付け）</div>
+        </div>
+        <div class="tbtns">
+          <div class="tbtn pri">今日やる<small>→ Todo</small></div>
+          <div class="tbtn">来週<small>wake +7d</small></div>
+          <div class="tbtn">相手待ち<small>waiting</small></div>
+          <div class="tbtn">エージェントへ<small>agent</small></div>
+        </div>
+        <div class="tsub"><span>やらない</span><span>完了 ✓</span></div>
+      </div>
+    </div>
+    <div class="caption"><b>2. 仕分け（Today の右上から）</b>　対象は「まとめて追加」直後・wake 到来・列未定。4 ボタン = データモデルの 4 状態。</div>
+  </div>
+
+  <!-- ===== 4. 詳細（iPhone） ===== -->
+  <div>
+    <div class="frame frame--phone">
+      <header class="topbar">
+        <div class="topbar__brand"><span class="mono" style="color:var(--ink-3)">#9</span></div>
+        <div class="topbar__actions"><span class="task__ghlink" style="font-size:12.5px">GitHub で開く ↗</span></div>
+      </header>
+      <div class="detail">
+        <div class="title">NDA の Admin 対応を待って進める</div>
+        <div class="kv">
+          <label>列</label><div class="pick"><span class="chip chip--off off">Backlog</span><span class="chip" style="--chip:#2563eb">Todo</span><span class="chip off">Doing</span><span class="chip off">Done</span></div>
+          <label>次に動く</label><div class="pick"><span class="chip off">自分</span><span class="chip chip--wait">相手待ち</span><span class="chip chip--agent off">エージェント</span></div>
+          <label>案件</label><div class="pick"><span class="chip chip--client">shinetsu</span><span class="chip off">＋</span></div>
+          <label>優先</label><div class="pick"><span class="chip off">★ high</span></div>
+          <label>期限</label><div class="in muted">未設定</div>
+          <label>再浮上</label><div class="in">2026-09-22</div>
+          <label>source</label><div class="in mono">slack.com/archives/C0…/p1758…</div>
+        </div>
+        <div class="lbl">チェックリスト</div>
+        <ul class="check"><li class="done">Slack で NDA を依頼する</li><li>返ってきたら山田さんへ転送する</li></ul>
+        <div class="lbl">メモ</div>
+        <div class="memo">法務確認中。Admin から返答が来たら転送。</div>
+        <div class="lbl">履歴</div>
+        <div class="cmt bot"><div class="who">manage-task-board · 9/16 10:20</div>sweep-slack から起票。source を記録。</div>
+        <div class="cmt"><div class="who">you · 9/17 08:05</div>相手待ちに変更。wake 9/22。</div>
+        <div class="cmt-in">コメントを追加…</div>
+      </div>
+      <div class="dialog__actions" style="padding:10px 16px 14px;border-top:1px solid var(--line)"><button type="button" class="btn">閉じる</button><button type="button" class="btn btn--primary">保存</button></div>
+    </div>
+    <div class="caption"><b>3. 詳細</b>　本文編集ではなく、task ブロックとラベルを入力欄に展開。履歴はコメント。</div>
+  </div>
+</div>
+
+<!-- ===== 3. ボード（デスクトップ） ===== -->
+<div class="row">
+  <div>
+    <div class="frame frame--desk">
+      <header class="topbar">
+        <div class="topbar__brand"><span class="tabs"><span>Today</span><span class="on">ボード</span></span>
+          <span style="margin-left:12px;font-size:12.5px;color:var(--ink-3)">client: <b style="color:var(--ink)">すべて</b> ▾</span></div>
+        <div class="topbar__actions"><label class="search"><input type="search" placeholder="検索" /></label>
+          <button class="iconbtn" type="button" aria-label="再読み込み"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M16.5 10a6.5 6.5 0 1 1-1.9-4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.5 3.5v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+      </header>
+      <main class="board">
+        <section class="column" style="--col-color: var(--col-backlog)">
+          <header class="column__head"><span class="column__dot"></span><span class="column__name">Backlog</span><span class="column__count">5</span><button class="column__add" type="button">+</button></header>
+          <div class="column__list">
+            <div class="rowcard" style="--dotc: var(--col-backlog)"><span class="dot"></span><div class="main"><div class="t">PC 内フォルダ・ルールを整理する</div></div><div class="right"><span class="star">★</span><span class="prog"><i style="--p:0%"></i>0/3</span></div></div>
+            <div class="rowcard" style="--dotc: var(--col-backlog)"><span class="dot"></span><div class="main"><div class="t">Outlook スキルを整理する</div></div><div class="right"><span class="prog"><i style="--p:0%"></i>0/2</span></div></div>
+            <div class="rowcard" style="--dotc: var(--col-backlog)"><span class="dot"></span><div class="main"><div class="t">UPSIDER スキルを整理する</div></div><div class="right"><span class="prog"><i style="--p:0%"></i>0/2</span></div></div>
+            <div class="rowcard" style="--dotc: var(--col-backlog)"><span class="dot"></span><div class="main"><div class="t">AI チームダッシュボードの Issue をつぶす</div><div class="sub"><span class="chip chip--ctx">pc2</span></div></div><div class="right"></div></div>
+            <div class="col-hidden">wake 未到来 1 件</div>
+          </div>
+        </section>
+        <section class="column" style="--col-color: var(--col-todo)">
+          <header class="column__head"><span class="column__dot"></span><span class="column__name">Todo</span><span class="column__count">3</span><button class="column__add" type="button">+</button></header>
+          <div class="column__list">
+            <div class="rowcard" style="--dotc: var(--col-todo)"><span class="dot"></span><div class="main"><div class="t">メールを送る</div><div class="sub"><span class="chip chip--client">dbj</span></div></div><div class="right"><span class="star">★</span><span class="due today">9/17</span></div></div>
+            <div class="rowcard" style="--dotc: var(--col-todo)"><span class="dot"></span><div class="main"><div class="t">旧 PC を麹町オフィスへ返却する</div></div><div class="right"><span class="due">9/19</span></div></div>
+            <div class="rowcard is-waiting" style="--dotc: var(--col-todo)"><span class="dot"></span><div class="main"><div class="t">NDA の Admin 対応を待って進める</div><div class="sub"><span class="chip chip--client">shinetsu</span><span class="chip chip--wait">待: Admin</span></div></div><div class="right"><span class="prog"><i style="--p:50%"></i>1/2</span></div></div>
+          </div>
+        </section>
+        <section class="column" style="--col-color: var(--col-doing)">
+          <header class="column__head"><span class="column__dot"></span><span class="column__name">Doing</span><span class="column__count">2</span><button class="column__add" type="button">+</button></header>
+          <div class="column__list">
+            <div class="rowcard" style="--dotc: var(--col-doing)"><span class="dot"></span><div class="main"><div class="t">事前相談のアジェンダを用意する</div><div class="sub"><span class="chip chip--client">jica</span></div></div><div class="right"><span class="prog"><i style="--p:33%"></i>1/3</span></div></div>
+            <div class="rowcard" style="--dotc: var(--col-doing)"><span class="dot"></span><div class="main"><div class="t">スライド作成スキルを更新する</div><div class="sub"><span class="chip chip--ctx">pc2</span><span class="agent">◆ agent</span></div></div><div class="right"><span class="star">★</span></div></div>
+          </div>
+        </section>
+        <section class="column" style="--col-color: var(--col-done)">
+          <header class="column__head"><span class="column__dot"></span><span class="column__name">Done</span><span class="column__count">3</span></header>
+          <div class="column__list">
+            <div class="rowcard card--done" style="--dotc: var(--col-done); opacity:.6"><span class="dot"></span><div class="main"><div class="t" style="text-decoration:line-through">Task Board の動作確認</div></div><div class="right"><span>9/16</span></div></div>
+            <div class="rowcard" style="--dotc: var(--col-done); opacity:.6"><span class="dot"></span><div class="main"><div class="t" style="text-decoration:line-through">fine-grained PAT を発行する</div></div><div class="right"><span>9/16</span></div></div>
+            <div class="col-hidden">やらないと決めた 1 件（not_planned）</div>
+          </div>
+        </section>
+      </main>
+      <form class="quickadd" style="padding:8px 14px"><input type="text" placeholder="タスクを追加…" /><select><option>Todo</option></select><button type="button" class="btn btn--primary">追加</button><button type="button" class="btn">まとめて</button></form>
+    </div>
+    <div class="caption"><b>4. ボード（PC）</b>　列は変えない。カードは 1 行型に統一（点・タイトル・チップ / ★・進捗・期限）。waiting は薄く、wake 未到来と not_planned は列の底に件数だけ。client で絞り込み。</div>
+  </div>
+</div>
+
+</body>
+</html>
