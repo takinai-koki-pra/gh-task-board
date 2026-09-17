@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task Board UI モック（Apple HIG 案）</title>
+<style>
+  :root {
+    --bg: #f2f2f7;          /* systemGroupedBackground */
+    --cell: #ffffff;        /* secondarySystemGroupedBackground */
+    --label: #000000;
+    --label2: #3c3c4399;    /* secondaryLabel */
+    --label3: #3c3c434d;    /* tertiaryLabel */
+    --sep: #3c3c4349;       /* separator */
+    --fill: #7878801f;      /* systemFill */
+    --fill2: #78788014;
+    --blue: #007aff; --red: #ff3b30; --orange: #ff9500; --green: #34c759; --purple: #af52de; --gray: #8e8e93; --indigo: #5856d6; --teal: #30b0c7;
+    --font: -apple-system, "SF Pro Text", "SF Pro JP", "Hiragino Sans", "Helvetica Neue", "Segoe UI", "Yu Gothic UI", sans-serif;
+    --r: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px 24px 60px; background: #e5e5ea; color: var(--label); font-family: var(--font); -webkit-font-smoothing: antialiased; font-size: 17px; line-height: 1.3; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .lead { color: #6e6e73; font-size: 13px; margin: 0 0 22px; }
+  .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 36px; }
+  .row > div:has(.phone) { width: 375px; }
+  .row > div:has(.mac) { width: 1000px; }
+  .caption { font-size: 12.5px; color: #6e6e73; margin: 8px 0 0 4px; line-height: 1.5; }
+  .caption b { color: #1d1d1f; }
+
+  /* ---------- iPhone ---------- */
+  .phone { width: 375px; height: 760px; background: var(--bg); border-radius: 40px; border: 1px solid #c6c6c8; overflow: hidden; display: flex; flex-direction: column; position: relative; box-shadow: 0 20px 50px -24px rgba(0,0,0,.5); }
+  .statusbar { height: 50px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 28px 6px; font-size: 15px; font-weight: 600; }
+  .statusbar .pill { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 118px; height: 34px; background: #000; border-radius: 20px; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; height: 44px; color: var(--blue); font-size: 17px; }
+  .nav .title { color: var(--label); font-weight: 600; }
+  .nav .ic { width: 28px; height: 28px; border-radius: 50%; background: var(--fill); display: inline-grid; place-items: center; color: var(--blue); font-weight: 700; }
+  .scroll { flex: 1; overflow-y: auto; padding: 0 16px 90px; }
+  .large { font-size: 34px; font-weight: 700; letter-spacing: -0.4px; margin: 2px 0 10px; }
+  .large.blue { color: var(--blue); }
+  .search { background: var(--fill); border-radius: var(--r); height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 10px; color: var(--label2); font-size: 17px; margin-bottom: 18px; }
+  .search::before { content: "⌕"; font-size: 20px; transform: scaleX(-1) rotate(-45deg); display: inline-block; }
+
+  /* smart lists grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+  .tile { background: var(--cell); border-radius: 12px; padding: 10px 12px 10px; display: grid; grid-template-columns: 1fr auto; row-gap: 6px; }
+  .tile .ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 15px; font-weight: 700; }
+  .tile .n { font-size: 22px; font-weight: 700; text-align: right; }
+  .tile .name { grid-column: 1 / 3; color: var(--label2); font-size: 15px; font-weight: 600; }
+
+  .sechead { font-size: 22px; font-weight: 700; margin: 6px 0 8px 2px; letter-spacing: -0.2px; }
+  .sechead small { font-weight: 400; font-size: 15px; color: var(--label2); margin-left: 6px; }
+
+  /* inset grouped list */
+  .list { background: var(--cell); border-radius: var(--r); overflow: hidden; margin-bottom: 20px; }
+  .cell { display: flex; align-items: flex-start; gap: 12px; padding: 11px 16px 11px 16px; position: relative; }
+  .cell + .cell::before { content: ""; position: absolute; top: 0; left: 50px; right: 0; height: 0.5px; background: var(--sep); }
+  .cell.plain + .cell.plain::before { left: 16px; }
+  .ck { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #c7c7cc; flex: none; margin-top: 1px; }
+  .ck.on { background: var(--blue); border-color: var(--blue); position: relative; }
+  .ck.on::after { content: ""; position: absolute; left: 7px; top: 3px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .ck.wait { border-style: dashed; }
+  .txt { flex: 1; min-width: 0; }
+  .t { font-size: 17px; }
+  .t .pri { color: var(--red); font-weight: 700; margin-right: 4px; }
+  .t .tag { color: var(--blue); }
+  .s { font-size: 15px; color: var(--label2); margin-top: 2px; }
+  .s .today { color: var(--blue); }
+  .s .over { color: var(--red); }
+  .s .sub { display: inline-flex; align-items: center; gap: 4px; }
+  .s .bar { display: inline-block; width: 36px; height: 3px; border-radius: 2px; background: var(--fill); position: relative; overflow: hidden; vertical-align: middle; }
+  .s .bar::after { content: ""; position: absolute; inset: 0; width: var(--p); background: var(--label2); }
+  .chev { color: #c4c4c6; font-size: 20px; align-self: center; }
+  .cell.dim .t, .cell.dim .s { color: var(--label3); }
+  .cell.dim .t { color: var(--label2); }
+  .spark { color: var(--purple); }
+
+  /* swipe */
+  .cell.swiped { margin-right: 140px; background: var(--cell); }
+  .swipewrap { position: relative; overflow: hidden; }
+  .swipeacts { position: absolute; inset: 0 0 0 auto; display: flex; }
+  .swipeacts span { width: 70px; display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 500; }
+  .swipeacts .a1 { background: var(--gray); } .swipeacts .a2 { background: var(--orange); }
+
+  /* bottom toolbar */
+  .toolbar { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; padding: 10px 16px 0; background: rgba(242,242,247,.86); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid var(--sep); display: flex; justify-content: space-between; align-items: flex-start; }
+  .newbtn { color: var(--blue); font-weight: 600; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+  .newbtn .plus { width: 24px; height: 24px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 18px; line-height: 1; }
+  .homebar { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: #000; }
+
+  /* segmented */
+  .seg { display: inline-flex; background: var(--fill); border-radius: 9px; padding: 2px; font-size: 13px; font-weight: 600; }
+  .seg span { padding: 5px 14px; border-radius: 7px; color: var(--label); }
+  .seg span.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  /* triage sheet */
+  .dimbg { position: absolute; inset: 0; background: rgba(0,0,0,.18); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--bg); border-radius: 16px 16px 0 0; padding: 8px 16px 30px; box-shadow: 0 -8px 30px rgba(0,0,0,.18); }
+  .grab { width: 36px; height: 5px; border-radius: 3px; background: #c7c7cc; margin: 0 auto 12px; }
+  .sheet .meta { display: flex; justify-content: space-between; color: var(--label2); font-size: 13px; margin-bottom: 10px; }
+  .tcard { background: var(--cell); border-radius: 14px; padding: 16px; }
+  .tcard .t { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
+  .tcard .s { margin-top: 6px; }
+  .cl { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+  .cl li { display: flex; gap: 10px; align-items: center; }
+  .cl li::before { content: ""; width: 18px; height: 18px; border: 1.5px solid #c7c7cc; border-radius: 50%; flex: none; }
+  .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .abtn { background: var(--cell); border-radius: 12px; padding: 12px 10px; text-align: center; font-size: 15px; font-weight: 600; color: var(--blue); }
+  .abtn small { display: block; font-size: 12px; color: var(--label2); font-weight: 400; margin-top: 2px; }
+  .abtn.fill { background: var(--blue); color: #fff; }
+  .abtn.fill small { color: rgba(255,255,255,.75); }
+  .link2 { display: flex; justify-content: space-between; margin-top: 12px; padding: 0 6px; font-size: 15px; }
+  .link2 .del { color: var(--red); }
+  .link2 .ok { color: var(--blue); }
+
+  /* detail sheet */
+  .form { background: var(--cell); border-radius: var(--r); margin-bottom: 18px; overflow: hidden; }
+  .frow { display: flex; align-items: center; gap: 12px; padding: 11px 16px; min-height: 44px; position: relative; font-size: 17px; }
+  .frow + .frow::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: var(--sep); }
+  .frow .k { flex: 1; }
+  .frow .v { color: var(--label2); display: flex; align-items: center; gap: 6px; }
+  .frow .v.blue { color: var(--blue); }
+  .frow .ico { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: #fff; font-size: 15px; flex: none; }
+  .toggle { width: 51px; height: 31px; border-radius: 16px; background: #e9e9eb; position: relative; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15); }
+  .toggle.on { background: var(--green); } .toggle.on::after { left: 22px; }
+  .titlein { font-size: 22px; font-weight: 600; padding: 12px 16px; }
+  .notes { color: var(--label2); padding: 10px 16px 12px; font-size: 15px; }
+  .hist .frow { align-items: flex-start; font-size: 15px; }
+  .hist .who { font-size: 12px; color: var(--label2); margin-bottom: 2px; }
+  .hist .who.bot { color: var(--purple); }
+  .cmtin { color: var(--label2); }
+
+  /* ---------- Mac ---------- */
+  .mac { width: 1000px; height: 600px; border-radius: 12px; overflow: hidden; border: 1px solid #c6c6c8; background: var(--cell); display: grid; grid-template-columns: 220px 1fr; box-shadow: 0 20px 50px -24px rgba(0,0,0,.5); }
+  .side { background: rgba(236,236,241,.9); border-right: 0.5px solid var(--sep); padding: 12px 10px; font-size: 13px; }
+  .lights { display: flex; gap: 8px; padding: 2px 6px 16px; }
+  .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .side .grp { color: var(--label2); font-size: 11px; font-weight: 600; margin: 12px 8px 4px; text-transform: uppercase; letter-spacing: .04em; }
+  .side .it { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; }
+  .side .it.on { background: var(--blue); color: #fff; }
+  .side .it .n { margin-left: auto; color: var(--label2); } .side .it.on .n { color: #fff; }
+  .side .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .main { display: flex; flex-direction: column; }
+  .mtop { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 0.5px solid var(--sep); background: rgba(255,255,255,.7); }
+  .mtop .h { font-size: 18px; font-weight: 700; }
+  .mtop .tools { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--label2); }
+  .mtop .tools .btn { border: 0.5px solid var(--sep); border-radius: 6px; padding: 4px 10px; background: #fff; color: var(--label); }
+  .cols { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 16px 18px; background: var(--bg); overflow: hidden; }
+  .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .col h3 { margin: 0 0 4px 4px; font-size: 13px; font-weight: 600; color: var(--label2); display: flex; align-items: center; gap: 6px; }
+  .col h3 .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .col h3 .n { color: var(--label3); font-weight: 400; }
+  .card { background: var(--cell); border-radius: 10px; padding: 10px 12px; box-shadow: 0 1px 2px rgba(0,0,0,.06); display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+  .card .ck { width: 18px; height: 18px; margin-top: 2px; }
+  .card .s { font-size: 12.5px; }
+  .card.dim { opacity: .55; }
+  .card.done .t { color: var(--label2); text-decoration: line-through; }
+  .more { font-size: 12px; color: var(--label2); text-align: center; padding: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Task Board UI モック — Apple HIG 案</h1>
+<p class="lead">iOS「リマインダー」の文法（大見出し、スマートリストのタイル、インセットグループ化リスト、丸チェック、ヘアライン区切り、下からのシート、システムカラー）で同じデータを描いたもの。</p>
+
+<div class="row">
+
+  <!-- ===== 1. ホーム ===== -->
+  <div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span class="pill"></span><span>●●●</span></div>
+      <div class="nav"><span></span><span>編集</span></div>
+      <div class="scroll">
+        <div class="search">検索</div>
+        <div class="grid">
+          <div class="tile"><span class="ico" style="background:var(--blue)">☀</span><span class="n">5</span><span class="name">今日</span></div>
+          <div class="tile"><span class="ico" style="background:var(--orange)">⏳</span><span class="n">1</span><span class="name">相手待ち</span></div>
+          <div class="tile"><span class="ico" style="background:var(--purple)">✦</span><span class="n">0</span><span class="name">エージェント</span></div>
+          <div class="tile"><span class="ico" style="background:var(--gray)">≡</span><span class="n">4</span><span class="name">後で</span></div>
+        </div>
+        <div class="sechead">案件</div>
+        <div class="list">
+          <div class="cell plain"><span class="ck" style="border:0;background:var(--blue);width:26px;height:26px;border-radius:7px"></span><div class="txt"><div class="t">DBJ</div></div><span class="s">1</span><span class="chev">›</span></div>
+          <div class="cell plain"><span class="ck" style="border:0;background:var(--teal);width:26px;height:26px;border-radius:7px"></span><div class="txt"><div class="t">信越</div></div><span class="s">1</span><span class="chev">›</span></div>
+          <div class="cell plain"><span class="ck" style="border:0;background:var(--green);width:26px;height:26px;border-radius:7px"></span><div class="txt"><div class="t">JICA</div></div><span class="s">1</span><span class="chev">›</span></div>
+          <div class="cell plain"><span class="ck" style="border:0;background:var(--gray);width:26px;height:26px;border-radius:7px"></span><div class="txt"><div class="t">個人・環境</div></div><span class="s">6</span><span class="chev">›</span></div>
+        </div>
+        <div class="sechead">未整理 <small>3 件 — 仕分けする ›</small></div>
+      </div>
+      <div class="toolbar"><span class="newbtn"><span class="plus">+</span>新規タスク</span><span style="color:var(--blue)">まとめて</span></div>
+      <div class="homebar"></div>
+    </div>
+    <div class="caption"><b>1. ホーム</b>　リマインダーそのもの。上 4 枚がデータモデルの派生ビュー、下は案件（client ラベル）。未整理があれば 1 行で誘導。</div>
+  </div>
+
+  <!-- ===== 2. 今日 ===== -->
+  <div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span class="pill"></span><span>●●●</span></div>
+      <div class="nav"><span>‹ リスト</span><span class="seg"><span class="on">今日</span><span>ボード</span></span><span class="ic">⋯</span></div>
+      <div class="scroll">
+        <div class="large blue">今日</div>
+        <div class="sechead" style="font-size:17px">進行中</div>
+        <div class="list">
+          <div class="cell"><span class="ck"></span><div class="txt"><div class="t">事前相談のアジェンダを用意する <span class="tag">#jica</span></div><div class="s"><span class="sub"><span class="bar" style="--p:33%"></span>1/3</span></div></div></div>
+          <div class="cell"><span class="ck"></span><div class="txt"><div class="t"><span class="pri">!</span>スライド作成スキルを更新する <span class="tag">#pc2</span></div><div class="s">意味的なアップデート方針を調査中</div></div></div>
+        </div>
+        <div class="sechead" style="font-size:17px">今日やる</div>
+        <div class="list">
+          <div class="swipewrap">
+            <div class="swipeacts"><span class="a1">詳細</span><span class="a2">来週</span></div>
+            <div class="cell swiped"><span class="ck"></span><div class="txt"><div class="t"><span class="pri">!</span>メールを送る <span class="tag">#dbj</span></div><div class="s"><span class="today">今日</span></div></div></div>
+          </div>
+          <div class="cell"><span class="ck"></span><div class="txt"><div class="t">旧 PC を麹町オフィスへ返却する</div><div class="s">9/19 金</div></div></div>
+          <div class="cell"><span class="ck"></span><div class="txt"><div class="t"><span class="pri">!</span>PC 内フォルダ・ルールを整理する</div><div class="s"><span class="sub"><span class="bar" style="--p:0%"></span>0/3</span></div></div></div>
+          <div class="cell"><span class="ck on"></span><div class="txt"><div class="t" style="color:var(--label2)">Task Board の動作確認</div></div></div>
+        </div>
+        <div class="sechead" style="font-size:17px;color:var(--label2)">相手待ち <small>1</small></div>
+        <div class="list">
+          <div class="cell dim"><span class="ck wait"></span><div class="txt"><div class="t">NDA の Admin 対応を待って進める <span class="tag">#shinetsu</span></div><div class="s">Admin の返答待ち · 9/22 に再表示</div></div></div>
+        </div>
+      </div>
+      <div class="toolbar"><span class="newbtn"><span class="plus">+</span>新規タスク</span></div>
+      <div class="homebar"></div>
+    </div>
+    <div class="caption"><b>2. 今日</b>　丸をタップで完了（1 秒の猶予つきでフェードアウト）。左スワイプで「詳細 / 来週」。完了直後の行は薄く残ってから消える。</div>
+  </div>
+
+  <!-- ===== 3. 仕分け ===== -->
+  <div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span class="pill"></span><span>●●●</span></div>
+      <div class="nav"><span></span><span class="title">今日</span><span></span></div>
+      <div class="scroll" style="opacity:.5">
+        <div class="large blue">今日</div>
+        <div class="list"><div class="cell"><span class="ck"></span><div class="txt"><div class="t">事前相談のアジェンダを用意する</div></div></div><div class="cell"><span class="ck"></span><div class="txt"><div class="t">スライド作成スキルを更新する</div></div></div></div>
+      </div>
+      <div class="dimbg"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="meta"><span>未整理</span><span>3 / 7</span></div>
+        <div class="tcard">
+          <div class="t"><span class="pri" style="color:var(--red)">!</span>PC 内フォルダ・ルールを整理する</div>
+          <div class="s">#pc2 · メモ 9/16 から</div>
+          <ul class="cl"><li>メールルール整理（特に SharePoint 周り）</li><li>今週分利用</li><li>目視確認</li></ul>
+        </div>
+        <div class="acts">
+          <div class="abtn fill">今日やる<small>Todo に入れる</small></div>
+          <div class="abtn">来週<small>9/24 に再表示</small></div>
+          <div class="abtn">相手待ち<small>誰かの返答待ち</small></div>
+          <div class="abtn">エージェントへ<small>自動で進める</small></div>
+        </div>
+        <div class="link2"><span class="del">やらない</span><span class="ok">完了にする</span></div>
+      </div>
+      <div class="homebar" style="background:#fff"></div>
+    </div>
+    <div class="caption"><b>3. 仕分け</b>　下からのシートで 1 枚ずつ。ボタンの補助文は「何が起きるか」を書く。上に引き上げると本文全体。</div>
+  </div>
+
+  <!-- ===== 4. 詳細 ===== -->
+  <div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span class="pill"></span><span>●●●</span></div>
+      <div class="nav"><span>キャンセル</span><span class="title">詳細</span><span style="font-weight:600">完了</span></div>
+      <div class="scroll">
+        <div class="form">
+          <div class="titlein">NDA の Admin 対応を待って進める</div>
+          <div class="notes">法務確認中。Admin から返答が来たら転送。</div>
+        </div>
+        <div class="form">
+          <div class="frow"><span class="ico" style="background:var(--red)">!</span><span class="k">期限</span><span class="v">なし ›</span></div>
+          <div class="frow"><span class="ico" style="background:var(--gray)">☾</span><span class="k">再表示</span><span class="v blue">9/22 月 ›</span></div>
+          <div class="frow"><span class="ico" style="background:var(--orange)">⏳</span><span class="k">相手待ち</span><span class="toggle on"></span></div>
+          <div class="frow"><span class="ico" style="background:var(--purple)">✦</span><span class="k">エージェントに任せる</span><span class="toggle"></span></div>
+        </div>
+        <div class="form">
+          <div class="frow"><span class="ico" style="background:var(--teal)">▤</span><span class="k">案件</span><span class="v">信越 ›</span></div>
+          <div class="frow"><span class="ico" style="background:var(--blue)">◫</span><span class="k">リスト</span><span class="v">Todo ›</span></div>
+          <div class="frow"><span class="ico" style="background:var(--red)">!</span><span class="k">優先</span><span class="v">なし ›</span></div>
+        </div>
+        <div class="form">
+          <div class="frow" style="font-size:15px"><span class="ck on" style="width:18px;height:18px"></span><span class="k" style="color:var(--label2);text-decoration:line-through">Slack で NDA を依頼する</span></div>
+          <div class="frow" style="font-size:15px"><span class="ck" style="width:18px;height:18px"></span><span class="k">返ってきたら山田さんへ転送する</span></div>
+          <div class="frow" style="font-size:15px;color:var(--blue)"><span style="width:18px;text-align:center">+</span><span class="k">項目を追加</span></div>
+        </div>
+        <div class="form">
+          <div class="frow"><span class="ico" style="background:var(--indigo)">↗</span><span class="k">Slack のスレッド</span><span class="v">開く ›</span></div>
+          <div class="frow"><span class="ico" style="background:#24292f">◉</span><span class="k">GitHub #9</span><span class="v">開く ›</span></div>
+        </div>
+        <div class="form hist">
+          <div class="frow"><div><div class="who bot">manage-task-board · 9/16 10:20</div>sweep-slack から起票。source を記録。</div></div>
+          <div class="frow"><div><div class="who">あなた · 9/17 08:05</div>相手待ちに変更。9/22 に再表示。</div></div>
+          <div class="frow cmtin">コメントを追加…</div>
+        </div>
+      </div>
+      <div class="homebar"></div>
+    </div>
+    <div class="caption"><b>4. 詳細</b>　リマインダーの詳細シートの構造。日付と「相手待ち / エージェント」はトグル、案件・リスト・優先は選択行、source はリンク行。</div>
+  </div>
+</div>
+
+<!-- ===== 5. Mac ===== -->
+<div class="row">
+  <div>
+    <div class="mac">
+      <aside class="side">
+        <div class="lights"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+        <div class="it on"><span class="dot" style="background:#fff"></span>今日<span class="n">5</span></div>
+        <div class="it"><span class="dot" style="background:var(--orange)"></span>相手待ち<span class="n">1</span></div>
+        <div class="it"><span class="dot" style="background:var(--purple)"></span>エージェント<span class="n">0</span></div>
+        <div class="it"><span class="dot" style="background:var(--gray)"></span>後で<span class="n">4</span></div>
+        <div class="grp">案件</div>
+        <div class="it"><span class="dot" style="background:var(--blue)"></span>DBJ<span class="n">1</span></div>
+        <div class="it"><span class="dot" style="background:var(--teal)"></span>信越<span class="n">1</span></div>
+        <div class="it"><span class="dot" style="background:var(--green)"></span>JICA<span class="n">1</span></div>
+        <div class="it"><span class="dot" style="background:var(--gray)"></span>個人・環境<span class="n">6</span></div>
+        <div class="grp">環境</div>
+        <div class="it"><span class="dot" style="background:#c7c7cc"></span>pc2<span class="n">2</span></div>
+      </aside>
+      <div class="main">
+        <div class="mtop"><span class="h">ボード <span style="font-weight:400;color:var(--label2);font-size:13px;margin-left:8px">すべての案件</span></span>
+          <div class="tools"><span class="seg"><span>今日</span><span class="on">ボード</span></span><span class="btn">まとめて追加</span><span>⌕</span></div></div>
+        <div class="cols">
+          <div class="col"><h3><span class="dot" style="background:var(--gray)"></span>Backlog <span class="n">5</span></h3>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t"><span class="pri" style="color:var(--red);font-weight:700">!</span> PC 内フォルダ・ルールを整理する</div><div class="s">0/3</div></div></div>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t">Outlook スキルを整理する</div><div class="s">0/2</div></div></div>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t">UPSIDER スキルを整理する</div><div class="s">0/2</div></div></div>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t">AI チームダッシュボードの Issue をつぶす <span style="color:var(--blue)">#pc2</span></div></div></div>
+            <div class="more">後で表示 1 件</div>
+          </div>
+          <div class="col"><h3><span class="dot" style="background:var(--blue)"></span>Todo <span class="n">3</span></h3>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t"><span class="pri" style="color:var(--red);font-weight:700">!</span> メールを送る <span style="color:var(--blue)">#dbj</span></div><div class="s" style="color:var(--blue)">今日</div></div></div>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t">旧 PC を麹町オフィスへ返却する</div><div class="s">9/19 金</div></div></div>
+            <div class="card dim"><span class="ck wait"></span><div class="txt"><div class="t">NDA の Admin 対応を待って進める <span style="color:var(--blue)">#shinetsu</span></div><div class="s">Admin の返答待ち · 1/2</div></div></div>
+          </div>
+          <div class="col"><h3><span class="dot" style="background:var(--orange)"></span>Doing <span class="n">2</span></h3>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t">事前相談のアジェンダを用意する <span style="color:var(--blue)">#jica</span></div><div class="s">1/3</div></div></div>
+            <div class="card"><span class="ck"></span><div class="txt"><div class="t"><span class="pri" style="color:var(--red);font-weight:700">!</span> スライド作成スキルを更新する <span style="color:var(--blue)">#pc2</span></div><div class="s"><span class="spark">✦ エージェントが調査中</span></div></div></div>
+          </div>
+          <div class="col"><h3><span class="dot" style="background:var(--green)"></span>Done <span class="n">3</span></h3>
+            <div class="card done"><span class="ck on"></span><div class="txt"><div class="t">Task Board の動作確認</div><div class="s">9/16</div></div></div>
+            <div class="card done"><span class="ck on"></span><div class="txt"><div class="t">fine-grained PAT を発行する</div><div class="s">9/16</div></div></div>
+            <div class="more">やらないと決めた 1 件</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><b>5. Mac</b>　サイドバーがスマートリストと案件。列は同じ 4 つ。カードはリマインダーの行そのもの（丸チェック・#タグ・補助行）。</div>
+  </div>
+</div>
+
+</body>
+</html>
