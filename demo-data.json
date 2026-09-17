@@ -1,12 +1,44 @@
-[
-  { "number": 12, "title": "iOS ホーム画面に追加して動作確認", "body": "Safari の共有メニューから「ホーム画面に追加」。\n\n- [ ] スタンドアロン表示\n- [ ] ドラッグで列移動", "state": "open", "labels": [{ "name": "status:doing", "color": "2f5d50" }], "html_url": "#", "created_at": "2026-09-15T01:00:00Z", "updated_at": "2026-09-16T02:10:00Z" },
-  { "number": 11, "title": "Cloudflare Pages にデプロイ", "body": "", "state": "open", "labels": [{ "name": "status:todo", "color": "b0722e" }, { "name": "infra", "color": "4e5a8c" }], "html_url": "#", "created_at": "2026-09-15T01:00:00Z", "updated_at": "2026-09-16T01:00:00Z" },
-  { "number": 10, "title": "経費精算を出す", "body": "9 月分。領収書は Drive の receipts フォルダ。", "state": "open", "labels": [{ "name": "status:todo", "color": "b0722e" }], "html_url": "#", "created_at": "2026-09-14T01:00:00Z", "updated_at": "2026-09-15T09:00:00Z" },
-  { "number": 9, "title": "提案書の図版を差し替える", "body": "", "state": "open", "labels": [{ "name": "status:doing", "color": "2f5d50" }, { "name": "client", "color": "a5402f" }], "html_url": "#", "created_at": "2026-09-13T01:00:00Z", "updated_at": "2026-09-15T08:00:00Z" },
-  { "number": 8, "title": "読む: GitHub REST API の Issues エンドポイント", "body": "", "state": "open", "labels": [], "html_url": "#", "created_at": "2026-09-12T01:00:00Z", "updated_at": "2026-09-12T01:00:00Z" },
-  { "number": 7, "title": "Projects v2 同期を検討", "body": "ラベル方式で足りなくなったら。", "state": "open", "labels": [{ "name": "idea", "color": "8f897a" }], "html_url": "#", "created_at": "2026-09-11T01:00:00Z", "updated_at": "2026-09-11T01:00:00Z" },
-  { "number": 6, "title": "歯医者の予約", "body": "", "state": "open", "labels": [], "html_url": "#", "created_at": "2026-09-10T01:00:00Z", "updated_at": "2026-09-10T01:00:00Z" },
-  { "number": 5, "title": "PWA manifest とアイコンを用意", "body": "", "state": "closed", "labels": [], "html_url": "#", "created_at": "2026-09-09T01:00:00Z", "updated_at": "2026-09-14T01:00:00Z" },
-  { "number": 4, "title": "ラベル方式で列を表現する設計を決める", "body": "", "state": "closed", "labels": [], "html_url": "#", "created_at": "2026-09-08T01:00:00Z", "updated_at": "2026-09-13T01:00:00Z" },
-  { "number": 3, "title": "fine-grained PAT を発行", "body": "", "state": "closed", "labels": [{ "name": "infra", "color": "4e5a8c" }], "html_url": "#", "created_at": "2026-09-08T01:00:00Z", "updated_at": "2026-09-12T01:00:00Z" }
-]
+{
+  "$comment": "?demo=1 用。@D+N は起動日から N 日後の YYYY-MM-DD、@T-N は N 分前の ISO 時刻に置き換わる。",
+  "triage": {
+    "9": { "priority": "must", "reason": "転送の依頼が止まっている" },
+    "15": { "priority": "other", "reason": "読み物" }
+  },
+  "issues": [
+    { "number": 17, "title": "新しい PC のセットアップ手順をまとめる", "state": "open", "labels": [{ "name": "ctx:pc2" }], "body": "```task\ndue:\nwake:\nsource:\n```\n", "html_url": "#", "created_at": "@T-300", "updated_at": "@T-300" },
+    { "number": 16, "title": "経費精算のルール変更を確認する", "state": "open", "labels": [], "body": "```task\ndue: @D+6\nwake:\nsource: https://outlook.office.com/mail/id/AAMk-demo\n```\n経理からの通知メール。", "html_url": "#", "created_at": "@T-200", "updated_at": "@T-200" },
+    { "number": 15, "title": "読む: GitHub REST API の Issues エンドポイント", "state": "open", "labels": [], "body": "```task\ndue:\nwake:\nsource: https://docs.github.com/en/rest/issues\n```\n", "html_url": "#", "created_at": "@T-1500", "updated_at": "@T-1500" },
+    { "number": 14, "title": "議事録を共有する", "state": "open", "labels": [{ "name": "client:shinetsu" }], "body": "```task\ndue: @D+5\nwake:\nsource: https://pragmateches.slack.com/archives/C0SHINETSU/p1700000000000100\n```\n", "html_url": "#", "created_at": "@T-90", "updated_at": "@T-90" },
+    { "number": 13, "title": "PC 内フォルダ・ルールを整理する", "state": "open", "labels": [{ "name": "priority:high" }], "body": "```task\ndue:\nwake:\nsource:\n```\n- [ ] メールルール整理（特に SharePoint 周り）\n- [ ] 今週分利用\n- [ ] 目視確認\n\n山田さんに確認してから着手。", "html_url": "#", "created_at": "@T-2800", "updated_at": "@T-2800" },
+    { "number": 12, "title": "見積の回答を返す", "state": "open", "labels": [{ "name": "client:dbj" }, { "name": "priority:high" }], "body": "```task\ndue: @D+0\nwake:\nsource: https://pragmateches.slack.com/archives/C0DBJ/p1700000000000200\n```\n", "html_url": "#", "created_at": "@T-120", "updated_at": "@T-120" },
+    { "number": 9, "title": "NDA の Admin 対応を待って進める", "state": "open", "labels": [{ "name": "waiting" }, { "name": "client:shinetsu" }], "body": "```task\ndue:\nwake:\nsource: https://pragmateches.slack.com/archives/C0SHINETSU/p1700000000000000\n```\nNDA は法務確認中。返ってきたら山田さんへ転送する。", "html_url": "#", "created_at": "@T-2900", "updated_at": "@T-2900" },
+    { "number": 8, "title": "スライド作成スキルを更新する", "state": "open", "labels": [{ "name": "status:doing" }, { "name": "ctx:pc2" }], "body": "```task\ndue:\nwake:\nsource:\n```\n意味的なスキルアップデートの方針を決める。", "html_url": "#", "created_at": "@T-4000", "updated_at": "@T-8" },
+    { "number": 11, "title": "Cloudflare Pages にデプロイする", "state": "open", "labels": [{ "name": "status:doing" }], "body": "```task\ndue:\nwake:\nsource:\n```\n- [x] wrangler login\n- [x] secret 登録\n- [ ] Access の確認", "html_url": "#", "created_at": "@T-5000", "updated_at": "@T-400" },
+    { "number": 10, "title": "経費精算を出す", "state": "open", "labels": [{ "name": "status:todo" }], "body": "```task\ndue: @D-1\nwake:\nsource:\n```\n9 月分。領収書は Drive の receipts フォルダ。", "html_url": "#", "created_at": "@T-6000", "updated_at": "@T-3000" },
+    { "number": 7, "title": "提案書の図版を差し替える", "state": "open", "labels": [{ "name": "status:todo" }, { "name": "client:jica" }], "body": "```task\ndue: @D+2\nwake:\nsource:\n```\n", "html_url": "#", "created_at": "@T-7000", "updated_at": "@T-3500" },
+    { "number": 6, "title": "請求書の受領を待つ", "state": "open", "labels": [{ "name": "status:todo" }, { "name": "waiting" }, { "name": "client:dbj" }], "body": "```task\ndue: @D+4\nwake:\nsource:\n```\n", "html_url": "#", "created_at": "@T-8000", "updated_at": "@T-4000" },
+    { "number": 5, "title": "週次レポートの下書きを作る", "state": "open", "labels": [{ "name": "status:todo" }, { "name": "agent:claude" }], "body": "```task\ndue: @D+1\nwake:\nsource:\n```\n", "html_url": "#", "created_at": "@T-9000", "updated_at": "@T-30" },
+    { "number": 4, "title": "iPhone のホーム画面で動作確認する", "state": "open", "labels": [], "body": "```task\ndue:\nwake: @D+3\nsource:\n```\n- [ ] スタンドアロン表示\n- [ ] 受信箱の横スクロール", "html_url": "#", "created_at": "@T-9500", "updated_at": "@T-5000" },
+    { "number": 3, "title": "Obsidian の古いノートを整理する", "state": "open", "labels": [], "body": "```task\ndue:\nwake: @D+10\nsource:\n```\n", "html_url": "#", "created_at": "@T-9800", "updated_at": "@T-6000" },
+    { "number": 2, "title": "GitHub Projects v2 との同期を検討する", "state": "open", "labels": [{ "name": "status:todo" }], "body": "```task\ndue:\nwake: @D+5\nsource:\n```\n", "html_url": "#", "created_at": "@T-9900", "updated_at": "@T-6500" },
+    { "number": 1, "title": "Task Board の初版を作る", "state": "closed", "state_reason": "completed", "labels": [], "body": "", "html_url": "#", "created_at": "@T-20000", "updated_at": "@T-9000" },
+    { "number": 18, "title": "Linear に移行する", "state": "closed", "state_reason": "not_planned", "labels": [], "body": "", "html_url": "#", "created_at": "@T-19000", "updated_at": "@T-8000" }
+  ],
+  "comments": {
+    "9": [
+      { "id": 901, "user": { "login": "manage-task-board" }, "created_at": "@T-2890", "body": "sweep-slack から起票。source を記録。", "html_url": "#" }
+    ],
+    "8": [
+      { "id": 801, "user": { "login": "you" }, "created_at": "@T-60", "body": "指示: スキル更新の方針案を 3 つ出して、推奨を書いて（agent:local）", "html_url": "#" },
+      { "id": 802, "user": { "login": "agent-ops" }, "created_at": "@T-20", "body": "着手: pc2 で調査を開始しました https://claude.ai/code/session_demo", "html_url": "#" },
+      { "id": 803, "user": { "login": "agent-ops" }, "created_at": "@T-8", "body": "報告: 意味的なスキルアップデートの方針として 3 案をまとめました。推奨は **案 2** です。\n\n1. **案 1** 既存カードの説明文だけ更新（半日）\n2. **案 2** 説明文 + 選択ロジックをカタログ側に寄せる（2 日）\n3. **案 3** スキルを 2 つに分割（1 週間）\n\n参照: https://github.com/example/slide-catalog-system/docs/plan.md", "html_url": "#" }
+    ],
+    "5": [
+      { "id": 501, "user": { "login": "you" }, "created_at": "@T-40", "body": "指示: 今週の完了タスクから週次レポートの下書きを作る（agent:claude）", "html_url": "#" },
+      { "id": 502, "user": { "login": "claude[bot]" }, "created_at": "@T-30", "body": "着手: ルーチンで作業中 https://claude.ai/code/session_demo2", "html_url": "#" }
+    ],
+    "11": [
+      { "id": 1101, "user": { "login": "you" }, "created_at": "@T-400", "body": "secret は登録済み。次のデプロイから有効。", "html_url": "#" }
+    ]
+  }
+}
