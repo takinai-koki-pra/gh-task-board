@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>最終モック案 — 受信箱 + AI への指示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" />
+<style>
+  :root {
+    --bg: #f5f5f7; --side: #f0f0f3; --cell: #ffffff; --hover: #f5f5f7; --sel: #ececef; --sel2: #e3e3e8;
+    --ink: #1d1d1f; --ink2: #6e6e73; --ink3: #b0b0b5; --sep: rgba(60,60,67,.14); --sep2: rgba(60,60,67,.24);
+    --accent: #1d1d1f; --red: #e5484d; --purple: #7c5cff; --purple-bg: #f4f1ff; --purple-bd: #ddd5ff; --amber: #c77d00; --amber-bg: #fff7e6; --amber-bd: #f0d9a8; --green: #2e9e5b;
+    --font: "Inter", "Noto Sans JP", system-ui, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px 28px 80px; background: #e4e4e8; color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; font-feature-settings: "tnum"; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .lead { color: var(--ink2); font-size: 13px; margin: 0 0 24px; max-width: 1000px; line-height: 1.6; }
+  .cap { font-size: 12.5px; color: var(--ink2); margin: 10px 0 40px 2px; max-width: 1120px; line-height: 1.65; }
+  .cap b { color: var(--ink); }
+  svg { width: 20px; height: 20px; fill: currentColor; flex: none; display: inline-block; vertical-align: middle; }
+  i[data-icon] { display: inline-flex; width: 20px; height: 20px; }
+  i[data-icon].s { width: 14px; height: 14px; } i[data-icon].s svg { width: 14px; height: 14px; }
+  i[data-icon].m { width: 16px; height: 16px; } i[data-icon].m svg { width: 16px; height: 16px; }
+  kbd { font-family: var(--mono); font-size: 11px; color: var(--ink2); border: 1px solid var(--sep2); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fff; line-height: 16px; display: inline-block; }
+  .win { width: 1120px; height: 700px; background: var(--cell); border-radius: 10px; border: 1px solid var(--sep2); overflow: hidden; position: relative; box-shadow: 0 24px 60px -30px rgba(0,0,0,.45); display: grid; grid-template-columns: 208px 1fr 360px; }
+  .pri { color: var(--red); font-weight: 700; margin-right: 3px; }
+  .ai { color: var(--purple); } .wait { color: var(--amber); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+
+  .side { background: var(--side); border-right: 1px solid var(--sep); padding: 12px 8px; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+  .side .app { font-size: 12px; color: var(--ink2); padding: 4px 8px 10px; display: flex; justify-content: space-between; align-items: center; }
+  .side .it { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 6px; }
+  .side .it i { color: var(--ink2); }
+  .side .it.on { background: var(--sel2); }
+  .side .it .n { margin-left: auto; color: var(--ink2); font-size: 12px; }
+  .side .grp { font-size: 11px; font-weight: 600; color: var(--ink2); letter-spacing: .04em; text-transform: uppercase; padding: 14px 8px 4px; }
+  .side .foot { margin-top: auto; padding: 8px 8px 0; color: var(--ink2); font-size: 11.5px; display: flex; gap: 8px; align-items: center; }
+
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .hdr { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--sep); }
+  .hdr h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .tabs { display: flex; gap: 2px; margin-left: 14px; }
+  .tabs span { padding: 4px 10px; border-radius: 6px; font-size: 13px; color: var(--ink2); }
+  .tabs span.on { background: var(--sel); color: var(--ink); font-weight: 500; }
+  .tabs span .n { margin-left: 5px; color: var(--ink3); }
+  .hdr .tools { display: flex; gap: 6px; color: var(--ink2); align-items: center; font-size: 12.5px; }
+  .dense { flex: 1; overflow: auto; padding-bottom: 36px; }
+  .sech { font-size: 11.5px; font-weight: 600; color: var(--ink2); padding: 10px 18px 4px; }
+  .drow { display: grid; grid-template-columns: 18px 44px 1fr auto auto; gap: 12px; align-items: center; height: 38px; padding: 0 18px; border-top: 1px solid var(--sep); font-size: 13.5px; }
+  .drow:hover { background: var(--hover); }
+  .drow.on { background: var(--sel); }
+  .drow > i { color: var(--ink3); }
+  .drow .id { font-family: var(--mono); font-size: 11.5px; color: var(--ink3); }
+  .drow .t { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drow .t .from { color: var(--ink2); font-weight: 400; margin-left: 8px; font-size: 12.5px; display: inline-flex; gap: 4px; align-items: center; }
+  .drow .props { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink2); }
+  .drow .props span { display: inline-flex; gap: 4px; align-items: center; padding: 2px 7px; border: 1px solid var(--sep); border-radius: 5px; }
+  .drow .props span.ai { border-color: var(--purple-bd); background: var(--purple-bg); }
+  .drow .keys { display: flex; gap: 3px; opacity: 0; } .drow.on .keys { opacity: 1; }
+  .status { position: absolute; left: 208px; right: 360px; bottom: 0; height: 30px; border-top: 1px solid var(--sep); background: var(--bg); display: flex; align-items: center; gap: 14px; padding: 0 18px; font-size: 11.5px; color: var(--ink2); }
+
+  .panel { border-left: 1px solid var(--sep); background: var(--cell); display: flex; flex-direction: column; min-height: 0; }
+  .panel .body { padding: 16px 18px; overflow: auto; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+  .panel .id { font-family: var(--mono); font-size: 11.5px; color: var(--ink3); display: flex; justify-content: space-between; }
+  .panel h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.35; }
+  .quote { border-left: 2px solid var(--sep2); padding: 6px 10px; color: var(--ink2); font-size: 13px; background: var(--bg); border-radius: 0 6px 6px 0; }
+  .quote .who { font-size: 11.5px; color: var(--ink3); margin-bottom: 2px; }
+  .prop { display: grid; grid-template-columns: 84px 1fr; gap: 6px 10px; font-size: 13px; align-items: center; }
+  .prop .k { color: var(--ink2); font-size: 12.5px; }
+  .prop .v { display: inline-flex; gap: 6px; align-items: center; height: 26px; padding: 0 8px; border: 1px solid var(--sep2); border-radius: 6px; width: fit-content; }
+  .prop .v.empty { color: var(--ink3); border-style: dashed; }
+  .prop .v.chg { border-color: var(--ink); background: #fff; }
+  .prop .v .old { color: var(--ink3); text-decoration: line-through; margin-right: 2px; }
+  .prop .v .arr { color: var(--ink3); }
+
+  /* 指示欄（右パネル下部） */
+  .ask { border-top: 1px solid var(--sep); padding: 12px 14px 14px; background: var(--cell); }
+  .ask .in { display: flex; align-items: flex-start; gap: 8px; border: 1px solid var(--ink); border-radius: 10px; padding: 9px 11px; font-size: 13.5px; line-height: 1.5; box-shadow: 0 0 0 3px rgba(29,29,31,.06); }
+  .ask .in i { color: var(--purple); margin-top: 2px; }
+  .ask .in .caret { display: inline-block; width: 1px; height: 16px; background: var(--ink); vertical-align: -3px; }
+  .ask .in.idle { border-color: var(--sep2); box-shadow: none; color: var(--ink3); }
+  .ask .in.idle i { color: var(--ink3); }
+  .ask .hint { font-size: 11.5px; color: var(--ink3); margin-top: 6px; display: flex; gap: 10px; }
+  .prop2 { margin-top: 10px; border: 1px solid var(--purple-bd); background: var(--purple-bg); border-radius: 10px; padding: 10px 12px; }
+  .prop2 .h { font-size: 12px; color: var(--purple); font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 6px; background: #fff; border: 1px solid var(--sep2); font-size: 12.5px; }
+  .chip .old { color: var(--ink3); text-decoration: line-through; }
+  .chip .arr { color: var(--ink3); }
+  .chip.agent { border-color: var(--purple-bd); color: var(--purple); }
+  .chip.agent i { color: var(--purple); }
+  .chip.x { color: var(--ink3); border-style: dashed; }
+  .prop2 .go { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 7px; font-size: 12.5px; font-weight: 500; border: 1px solid var(--sep2); background: #fff; }
+  .btn.pri2 { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.pri2 kbd { background: #333; border-color: #555; color: #ddd; }
+  .btn.ghost { border-color: transparent; color: var(--ink2); }
+
+  /* エージェント報告 */
+  .report { border: 1px solid var(--purple-bd); border-radius: 10px; overflow: hidden; }
+  .report .rh { background: var(--purple-bg); padding: 8px 12px; font-size: 12px; color: var(--purple); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .report .rh span { margin-left: auto; font-weight: 400; color: var(--ink2); }
+  .report .rb { padding: 10px 12px; font-size: 13px; }
+  .report .rb ol { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+  .report .rb li b { font-weight: 600; }
+  .report .rb .lnk { color: var(--ink2); font-size: 12px; margin-top: 8px; display: flex; gap: 12px; }
+  .decide { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* パレット */
+  .dimmer { position: absolute; inset: 0; background: rgba(0,0,0,.22); }
+  .pal { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); width: 600px; background: #fff; border-radius: 12px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.5), 0 0 0 1px var(--sep2); overflow: hidden; }
+  .pal .in { display: flex; align-items: center; gap: 10px; padding: 14px 16px; font-size: 16px; border-bottom: 1px solid var(--sep); }
+  .pal .in i { color: var(--purple); }
+  .pal .in .caret { display: inline-block; width: 1px; height: 20px; background: var(--ink); }
+  .pal .g { font-size: 11px; font-weight: 600; color: var(--ink2); letter-spacing: .04em; text-transform: uppercase; padding: 10px 16px 4px; }
+  .pal .o { display: flex; align-items: flex-start; gap: 10px; padding: 9px 16px; font-size: 14px; }
+  .pal .o i { color: var(--ink2); margin-top: 2px; }
+  .pal .o.on { background: var(--sel); }
+  .pal .o .sub { color: var(--ink2); font-size: 12.5px; display: block; margin-top: 2px; }
+  .pal .o .k { margin-left: auto; display: flex; gap: 4px; align-self: center; }
+  .pal .o .chips { margin-top: 6px; }
+  .pal .ft { border-top: 1px solid var(--sep); padding: 8px 16px; font-size: 12px; color: var(--ink3); display: flex; gap: 14px; }
+  .toast { position: absolute; left: 228px; bottom: 44px; display: flex; align-items: center; gap: 14px; background: #1d1d1f; color: #fff; font-size: 13px; padding: 9px 12px 9px 14px; border-radius: 9px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); }
+  .toast .u { color: #cfcfd4; display: inline-flex; gap: 6px; align-items: center; }
+  .toast kbd { background: #2c2c2e; border-color: #444; color: #ccc; }
+</style>
+</head>
+<body>
+<h1>最終モック案 — 受信箱（A）に AI への指示（D）を組み込む</h1>
+<p class="lead">チャット窓は作らない。AI への指示は 3 か所から出す: ① 右パネル下の「指示」欄（選択中のタスクに対して）、② Ctrl+K（文を打てばそのまま解釈）、③ 受信箱に戻ってきたエージェント報告への「承認 / 差し戻し」。AI の提案は必ずチップで差分を見せ、<kbd>Enter</kbd> で適用、<kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻す。</p>
+
+<template id="sidebar">
+  <aside class="side">
+    <div class="app"><span>tasks</span><span style="display:flex;gap:6px"><i data-icon="magnifying-glass" class="m"></i><i data-icon="gear" class="m"></i></span></div>
+    <div class="it on"><i data-icon="tray"></i>受信箱<span class="n">7</span></div>
+    <div class="it"><i data-icon="sun"></i>今日<span class="n">5</span></div>
+    <div class="it"><i data-icon="hourglass"></i>相手待ち<span class="n">1</span></div>
+    <div class="it"><i data-icon="sparkle"></i>エージェント<span class="n">1</span></div>
+    <div class="it"><i data-icon="moon"></i>後で<span class="n">4</span></div>
+    <div class="it"><i data-icon="kanban"></i>ボード</div>
+    <div class="grp">案件</div>
+    <div class="it"><span class="dot" style="background:#1d1d1f"></span>DBJ<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#6e6e73"></span>信越<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#9a9aa0"></span>JICA<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#c9c9ce"></span>個人・環境<span class="n">6</span></div>
+    <div class="foot"><kbd>Ctrl</kbd>+<kbd>K</kbd> コマンド / 指示</div>
+  </aside>
+</template>
+
+<template id="list">
+  <div class="main">
+    <div class="hdr"><div style="display:flex;align-items:center"><h2>受信箱</h2><div class="tabs"><span class="on">対応必須<span class="n">3</span></span><span>その他<span class="n">4</span></span></div></div>
+      <div class="tools"><span>表示</span><i data-icon="sliders-horizontal" class="m"></i></div></div>
+    <div class="dense">
+      <div class="sech">Slack から</div>
+      <div class="drow" data-sel="1"><i data-icon="circle"></i><span class="id">#9</span><span class="t">NDA の Admin 対応を待って進める<span class="from"><i data-icon="slack-logo" class="s"></i>信越 · 田中</span></span><span class="props"><span class="wait"><i data-icon="hourglass" class="s"></i>待ち</span></span><span class="keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></span></div>
+      <div class="drow"><i data-icon="circle"></i><span class="id">#12</span><span class="t">見積の回答を返す<span class="from"><i data-icon="slack-logo" class="s"></i>DBJ · 山田</span></span><span class="props"><span><i data-icon="calendar-blank" class="s"></i>今日</span><span class="pri">!</span></span><span class="keys"></span></div>
+      <div class="sech">貼り付けから</div>
+      <div class="drow"><i data-icon="circle"></i><span class="id">#13</span><span class="t">PC 内フォルダ・ルールを整理する<span class="from"><i data-icon="clipboard-text" class="s"></i>メモ 9/16</span></span><span class="props"><span><i data-icon="check-square" class="s"></i>0/3</span><span class="pri">!</span></span><span class="keys"></span></div>
+      <div class="sech">エージェントから</div>
+      <div class="drow" data-sel="2"><i data-icon="circle"></i><span class="id">#8</span><span class="t">スライド作成スキル: 方針案が 3 つ出ました<span class="from ai"><i data-icon="sparkle" class="s"></i>manage-task-board · 8 分前</span></span><span class="props"><span class="ai">確認待ち</span></span><span class="keys"><kbd>Y</kbd><kbd>R</kbd></span></div>
+      <div class="sech" style="color:var(--ink3)">その他 4 件は <kbd>Tab</kbd> で</div>
+    </div>
+    <div class="status"><span><kbd>J</kbd><kbd>K</kbd> 移動</span><span><kbd>1</kbd> 今日</span><span><kbd>2</kbd> 後で</span><span><kbd>3</kbd> 相手待ち</span><span><kbd>4</kbd> エージェント</span><span><kbd>E</kbd> 完了</span><span><kbd>I</kbd> 指示</span></div>
+  </div>
+</template>
+
+<!-- ===== 1. 右パネルの「指示」欄 ===== -->
+<div class="win" id="w1" data-sel="1">
+  <div class="panel">
+    <div class="body">
+      <div class="id"><span>#9 · 信越</span><span>Slack で開く ↗</span></div>
+      <h3>NDA の Admin 対応を待って進める</h3>
+      <div class="quote"><div class="who">田中 · #shinetsu-nda · 9/16 09:41</div>NDA は法務確認中です。返ってきたら山田さんへ転送お願いします。</div>
+      <div class="prop">
+        <span class="k">状態</span><span class="v"><i data-icon="circle" class="m"></i>Todo</span>
+        <span class="k">次に動く</span><span class="v chg"><span class="old wait">相手待ち</span><span class="arr">→</span>自分</span>
+        <span class="k">期限</span><span class="v chg"><span class="old">なし</span><span class="arr">→</span>9/22 月</span>
+        <span class="k">再表示</span><span class="v empty"><i data-icon="moon" class="m"></i>なし</span>
+        <span class="k">案件</span><span class="v"><span class="dot" style="background:#6e6e73"></span>信越</span>
+      </div>
+    </div>
+    <div class="ask">
+      <div class="in"><i data-icon="sparkle" class="m"></i><span>Admin から返事きたから山田さんに転送で。月曜まで<span class="caret"></span></span></div>
+      <div class="prop2">
+        <div class="h"><i data-icon="sparkle" class="s"></i>こう変えます</div>
+        <div class="chips">
+          <span class="chip"><span class="old">相手待ち</span><span class="arr">→</span>自分</span>
+          <span class="chip">期限 <b>9/22 月</b></span>
+          <span class="chip">タイトル <span class="old">…待って進める</span><span class="arr">→</span>山田さんへ NDA を転送する</span>
+          <span class="chip agent"><i data-icon="sparkle" class="s"></i>転送メールの下書きを作る</span>
+        </div>
+        <div class="go"><span class="btn pri2">適用 <kbd>Enter</kbd></span><span class="btn">下書きは頼まない</span><span class="btn ghost">やめる <kbd>Esc</kbd></span></div>
+      </div>
+      <div class="hint"><span>上のプロパティにも差分を先に映す</span><span>適用後は履歴にコメントが残る</span></div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>1. 選択中のタスクに指示する（<kbd>I</kbd>）</b>　右パネル下の欄に自然文を打つと、Gemini が「こう変えます」をチップで返す（属性の変更・タイトルの言い換え・エージェントへの依頼を区別）。同時に上のプロパティにも打ち消し線で差分を先に映す。<kbd>Enter</kbd> で適用、エージェント依頼のチップだけ外すこともできる。会話のログは持たない。指示と結果は Issue のコメントに 1 行で残る。</p>
+
+<!-- ===== 2. エージェント報告への承認 / 差し戻し ===== -->
+<div class="win" id="w2" data-sel="2">
+  <div class="panel">
+    <div class="body">
+      <div class="id"><span>#8 · pc2</span><span>GitHub で開く ↗</span></div>
+      <h3>スライド作成スキルを更新する</h3>
+      <div class="report">
+        <div class="rh"><i data-icon="sparkle" class="s"></i>エージェントの報告<span>8 分前 · 12 分かけて調査</span></div>
+        <div class="rb">意味的なスキルアップデートの方針として 3 案をまとめました。推奨は <b>案 2</b> です。
+          <ol>
+            <li><b>案 1</b> 既存カードの説明文だけ更新（半日）</li>
+            <li><b>案 2</b> 説明文 + 選択ロジックをカタログ側に寄せる（2 日）</li>
+            <li><b>案 3</b> スキルを 2 つに分割（1 週間）</li>
+          </ol>
+          <div class="lnk"><span>詳細: コメント #3</span><span>参照: slide-catalog-system/docs/…</span></div>
+        </div>
+      </div>
+      <div class="decide">
+        <span class="btn pri2">案 2 で進める <kbd>Y</kbd></span>
+        <span class="btn">Doing に戻す</span>
+        <span class="btn ghost">後で</span>
+      </div>
+      <div class="prop">
+        <span class="k">状態</span><span class="v"><i data-icon="circle" class="m"></i>Doing</span>
+        <span class="k">次に動く</span><span class="v"><span class="dot" style="background:var(--purple)"></span>エージェント → <b>自分（確認）</b></span>
+      </div>
+    </div>
+    <div class="ask">
+      <div class="in"><i data-icon="sparkle" class="m"></i><span>案 2 で。ただし分割は将来やる前提でカタログ側の変更点を一覧にして<span class="caret"></span></span></div>
+      <div class="prop2">
+        <div class="h"><i data-icon="sparkle" class="s"></i>差し戻し内容</div>
+        <div class="chips"><span class="chip agent"><i data-icon="sparkle" class="s"></i>案 2 を採用して変更点一覧を作る</span><span class="chip">次に動く → エージェント</span><span class="chip">受信箱から外す</span></div>
+        <div class="go"><span class="btn pri2">送る <kbd>Enter</kbd></span><span class="btn ghost">やめる <kbd>Esc</kbd></span></div>
+      </div>
+      <div class="hint"><span>指示はコメントとして Issue に付き、エージェントはそれを読んで続ける</span></div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>2. エージェント報告を受信箱で処理する（<kbd>Y</kbd> 承認 / <kbd>R</kbd> 差し戻し）</b>　エージェントの成果は「確認待ち」として受信箱に戻る。右パネルに報告の要約と選択肢、承認ボタン。同じ「指示」欄に打てば差し戻しになり、Issue のコメントとして送られ、エージェントはそれを読んで続ける。人は受信箱を空にする動作の中で、エージェントの仕事も裁ける。</p>
+
+<!-- ===== 3. Ctrl+K に文を打つ ===== -->
+<div class="win" id="w3" data-sel="1">
+  <div class="panel">
+    <div class="body">
+      <div class="id"><span>#9 · 信越</span><span>Slack で開く ↗</span></div>
+      <h3>NDA の Admin 対応を待って進める</h3>
+      <div class="quote"><div class="who">田中 · #shinetsu-nda · 9/16 09:41</div>NDA は法務確認中です。返ってきたら山田さんへ転送お願いします。</div>
+      <div class="prop">
+        <span class="k">状態</span><span class="v"><i data-icon="circle" class="m"></i>Todo</span>
+        <span class="k">次に動く</span><span class="v wait"><i data-icon="hourglass" class="m"></i>相手待ち · Admin</span>
+        <span class="k">再表示</span><span class="v"><i data-icon="moon" class="m"></i>9/22 月</span>
+      </div>
+    </div>
+    <div class="ask"><div class="in idle"><i data-icon="sparkle" class="m"></i>このタスクに指示… <kbd style="margin-left:auto">I</kbd></div></div>
+  </div>
+  <div class="dimmer"></div>
+  <div class="pal">
+    <div class="in"><i data-icon="sparkle"></i>田中さんの昨日のメッセージからタスク拾って<span class="caret"></span></div>
+    <div class="g">AI の提案</div>
+    <div class="o on"><i data-icon="tray"></i><div>Slack の #shinetsu-nda と DM から 2 件を受信箱に入れる<span class="sub">「見積の回答を返す（DBJ・今日）」「議事録を共有する（信越・金曜）」。既にある #12 は重複として除外</span><div class="chips"><span class="chip">見積の回答を返す · 今日</span><span class="chip">議事録を共有する · 9/19</span><span class="chip x">#12 は重複</span></div></div><span class="k"><kbd>Enter</kbd></span></div>
+    <div class="o"><i data-icon="magnifying-glass"></i><div>候補を先に見る<span class="sub">受信箱に入れず、右パネルに一覧で出す</span></div></div>
+    <div class="g">コマンド</div>
+    <div class="o"><i data-icon="sun"></i><div>今日 に移動</div><span class="k"><kbd>G</kbd><kbd>T</kbd></span></div>
+    <div class="o"><i data-icon="kanban"></i><div>ボード</div><span class="k"><kbd>B</kbd></span></div>
+    <div class="ft"><span>文を打つと AI の提案、単語ならコマンド検索</span><span style="margin-left:auto"><kbd>Esc</kbd> 閉じる</span></div>
+  </div>
+</div>
+<p class="cap"><b>3. Ctrl+K に文を打つ</b>　パレットは 1 つだけ。単語ならコマンド検索、文なら AI の提案に切り替わる（判定は文字数と助詞）。提案は「何が起きるか」をチップで示し、重複は除外理由付きで見せる。<kbd>Enter</kbd> で実行。ここでも会話は続かず、結果は受信箱に落ちてくる。</p>
+
+<!-- ===== 4. 適用後 ===== -->
+<div class="win" id="w4" data-sel="1">
+  <div class="panel">
+    <div class="body">
+      <div class="id"><span>#9 · 信越</span><span>Slack で開く ↗</span></div>
+      <h3>山田さんへ NDA を転送する</h3>
+      <div class="prop">
+        <span class="k">状態</span><span class="v"><i data-icon="circle" class="m"></i>Todo</span>
+        <span class="k">次に動く</span><span class="v">自分</span>
+        <span class="k">期限</span><span class="v"><i data-icon="calendar-blank" class="m"></i>9/22 月</span>
+        <span class="k">案件</span><span class="v"><span class="dot" style="background:#6e6e73"></span>信越</span>
+      </div>
+      <div class="report" style="border-color:var(--sep2)">
+        <div class="rh" style="background:var(--bg);color:var(--ink2)"><i data-icon="chat-circle" class="s"></i>履歴<span>3</span></div>
+        <div class="rb" style="font-size:12.5px;display:flex;flex-direction:column;gap:8px">
+          <div><span style="color:var(--purple)">manage-task-board · 9/16 10:20</span><br>sweep-slack から起票。source を記録。</div>
+          <div><span style="color:var(--ink2)">あなた · 9/18 09:12</span><br>指示: 「Admin から返事きたから山田さんに転送で。月曜まで」 → 次に動く: 自分、期限 9/22、タイトル変更</div>
+          <div><span style="color:var(--purple)">agent · 9/18 09:13</span><br>転送メールの下書きを Outlook に作成しました（件名: NDA ご送付）。</div>
+        </div>
+      </div>
+    </div>
+    <div class="ask"><div class="in idle"><i data-icon="sparkle" class="m"></i>このタスクに指示… <kbd style="margin-left:auto">I</kbd></div></div>
+  </div>
+  <div class="toast"><i data-icon="check-circle" class="m" style="color:#9ad6b2"></i>#9 を更新し、下書き作成をエージェントに頼みました<span class="u"><i data-icon="arrow-counter-clockwise" class="m"></i>元に戻す <kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div>
+</div>
+<p class="cap"><b>4. 適用後</b>　プロパティが確定し、指示と結果は履歴に 1 行ずつ残る。エージェントに頼んだ分は「agent」のコメントで戻ってくる。トーストから <kbd>Ctrl</kbd>+<kbd>Z</kbd> で属性の変更だけ戻せる（エージェントへの依頼は取り消しコメントになる）。</p>
+
+<script>
+  const side = document.getElementById("sidebar").content;
+  const list = document.getElementById("list").content;
+  document.querySelectorAll(".win").forEach((w) => {
+    const l = list.cloneNode(true);
+    l.querySelectorAll(".drow[data-sel]").forEach((r) => { if (r.dataset.sel === w.dataset.sel) r.classList.add("on"); });
+    w.insertBefore(l, w.firstChild);
+    w.insertBefore(side.cloneNode(true), w.firstChild);
+  });
+  const BASE = "https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1/assets/light/";
+  const cache = new Map();
+  const load = (n) => { if (!cache.has(n)) cache.set(n, fetch(`${BASE}${n}-light.svg`).then((r) => (r.ok ? r.text() : "")).then((s) => s.replace(/\s(width|height)="[^"]*"/g, "")).catch(() => "")); return cache.get(n); };
+  document.querySelectorAll("i[data-icon]").forEach(async (el) => { el.innerHTML = await load(el.dataset.icon); });
+</script>
+</body>
+</html>
