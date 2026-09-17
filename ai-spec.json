@@ -1,0 +1,302 @@
+{
+  "$comment": "Gemini のプロンプトとスキーマ。_worker.js と serve.py が同じものを読む（片方だけ直さない）。入力は各プロンプトの末尾に JSON で付く。出力は提案だけで、適用はボードのコードが行う。",
+  "endpoints": {
+    "tasks": {
+      "prompt": "あなたはタスク整理アシスタントです。ユーザーが貼り付けたテキスト（メモ・メール・議事録・箇条書きなど）から、実行すべきタスクを抽出してください。\n\nルール:\n- title は 40 字以内の自然な日本語で、動詞で終える（例: 「山田さんに NDA を返送する」）。案件名の接頭辞は付けない\n- 重複や言い換えは 1 つにまとめる\n- 挨拶・雑談・単なる事実の記述はタスクにしない\n- 見出し行（案件名・プロジェクト名）は配下の行に引き継ぎ、client に英小文字の slug で入れる（例: dbj, shinetsu, jica）。分からなければ空\n- インデントの深い小項目は checklist に入れる\n- 「いまやってる」「対応中」「調査中」は column を doing、今すぐ着手すべきものは todo、「時間があるときに」「いつか」は backlog\n- ★・急ぎ・至急は priority を high、それ以外は none\n- 「〜待ち」「返ってきたら」「他者が対応中」は next を waiting、それ以外は self\n- 「金曜まで」「9/19」などの期日は due に YYYY-MM-DD で入れる（today を基準に解決する）。無ければ空\n- URL・permalink は source に入れる。無ければ空\n- 補足は notes に書く（無ければ空）\n- すべての項目を必ず書く。無い値は空文字・空配列にする（priority は none、next は self）\n- 値には結論だけを書き、説明や考えた過程は書かない\n- 何も抽出できなければ tasks を空配列にする\n\n--- 入力（JSON。today と text） ---\n",
+      "schema": {
+        "type": "OBJECT",
+        "properties": {
+          "tasks": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "title": {
+                  "type": "STRING"
+                },
+                "column": {
+                  "type": "STRING",
+                  "enum": [
+                    "backlog",
+                    "todo",
+                    "doing"
+                  ]
+                },
+                "client": {
+                  "type": "STRING"
+                },
+                "priority": {
+                  "type": "STRING",
+                  "enum": [
+                    "high",
+                    "none"
+                  ]
+                },
+                "next": {
+                  "type": "STRING",
+                  "enum": [
+                    "self",
+                    "waiting"
+                  ]
+                },
+                "due": {
+                  "type": "STRING"
+                },
+                "source": {
+                  "type": "STRING"
+                },
+                "checklist": {
+                  "type": "ARRAY",
+                  "items": {
+                    "type": "STRING"
+                  }
+                },
+                "notes": {
+                  "type": "STRING"
+                }
+              },
+              "required": [
+                "title",
+                "column",
+                "client",
+                "priority",
+                "next",
+                "due",
+                "source",
+                "checklist",
+                "notes"
+              ],
+              "propertyOrdering": [
+                "title",
+                "column",
+                "client",
+                "priority",
+                "next",
+                "due",
+                "source",
+                "checklist",
+                "notes"
+              ]
+            }
+          }
+        },
+        "required": [
+          "tasks"
+        ]
+      }
+    },
+    "instruct": {
+      "prompt": "あなたは個人用タスクボードのアシスタントです。ユーザーが 1 件のタスクに対して自然文で指示を出しました。タスクの現在値と指示から、タスクの属性をどう変えるべきか、エージェントに頼むべき作業があるかを提案してください。あなたは提案するだけで、実際の変更はボードが行います。\n\nフィールド（changes[].field）と to の値:\n- next: 次に動く主体。self（自分）/ waiting（相手待ち）/ agent（エージェント）\n- due: 期限。YYYY-MM-DD。today を基準に「月曜まで」などを解決する。消すなら空文字\n- wake: 再表示日（それまで今日の一覧に出さない）。YYYY-MM-DD か空文字\n- title: 40 字以内、動詞で終わる日本語。状況が変わって次の行動が変わった時だけ書き換える\n- client: 案件の slug（英小文字）。clients に候補がある\n- priority: high / none\n- column: backlog / todo / doing / done\n\nルール:\n- 指示から読み取れる変更だけを出す。現在値と同じものは出さない。from には現在値を書く\n- 「返事が来た」「対応してもらえた」なら相手待ちは解除（next を self）\n- メール・Slack・資料などの下書きや調査など、エージェントに任せられる作業は agent_requests に 1 件ずつ出す。text は「〜を作る」のような 30 字以内の依頼文。route は PC の Outlook・Slack・ファイルが要るなら local、コードやリポジトリの作業なら claude、どちらでもなければ claude\n- ユーザー自身がやると言っている作業を agent_requests にしない\n- note は補足が必要な時だけ 1 行。無ければ空文字\n\n--- 入力（JSON。today, clients, task, instruction） ---\n",
+      "schema": {
+        "type": "OBJECT",
+        "properties": {
+          "changes": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "field": {
+                  "type": "STRING",
+                  "enum": [
+                    "next",
+                    "due",
+                    "wake",
+                    "title",
+                    "client",
+                    "priority",
+                    "column"
+                  ]
+                },
+                "from": {
+                  "type": "STRING"
+                },
+                "to": {
+                  "type": "STRING"
+                }
+              },
+              "required": [
+                "field",
+                "from",
+                "to"
+              ],
+              "propertyOrdering": [
+                "field",
+                "from",
+                "to"
+              ]
+            }
+          },
+          "agent_requests": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "text": {
+                  "type": "STRING"
+                },
+                "route": {
+                  "type": "STRING",
+                  "enum": [
+                    "claude",
+                    "codex",
+                    "local"
+                  ]
+                }
+              },
+              "required": [
+                "text",
+                "route"
+              ]
+            }
+          },
+          "note": {
+            "type": "STRING"
+          }
+        },
+        "required": [
+          "changes",
+          "agent_requests",
+          "note"
+        ],
+        "propertyOrdering": [
+          "changes",
+          "agent_requests",
+          "note"
+        ]
+      }
+    },
+    "interpret": {
+      "prompt": "あなたは個人用タスクボードのコマンドパレットです。ユーザーが自然文を 1 つ打ちました。選択中のタスク（selected、無い場合は null）とボードの状況から、実行できる操作の提案を 1〜3 件、良い順に返してください。あなたは提案するだけで、実行はボードが行います。会話はしません。\n\nproposals[] の各項目（すべて必ず書く）:\n- kind: change（既存タスクの属性を変える）/ create（新しいタスクを作る）/ route（既存タスクをエージェントに頼む）\n- target: 対象タスクの番号。「これ」「この」は selected。create では 0\n- changes: 変える属性の配列。change では 1 件以上。create では初期値（無ければ空配列）。route では空配列\n- title: create の新しいタスク名（40 字以内、動詞で終わる日本語。例: 「議事録の要点を JICA に送る」）。change と route では空文字\n- agent_text: route の依頼文（30 字以内）。それ以外は空文字\n- route: route の実行先。PC の Outlook・Slack・ファイルが要るなら local、それ以外は claude。route 以外では claude\n- summary: 実行内容を 30 字以内で（例: 「#9 の期限を 9/25 金にする」）\n\nchanges[] の field と to:\n- next: self / waiting / agent\n- due, wake: YYYY-MM-DD（today を基準に「来週の金曜」などを解決する）。消すときは空文字\n- title: 40 字以内の日本語\n- client: 案件 slug（clients の中から）\n- priority: high / none\n- column: backlog / todo / doing / done（「今日やる」は todo）\n\nルール:\n- 値には結論だけを書く。説明・迷い・考えた過程はどの項目にも書かない\n- 「DBJ の案件で今日やる」のように案件と行動が両方あれば、changes に client と column の両方を入れる\n- Slack やメールの取得など、ボードにできない操作は提案しない。できることが無ければ proposals を空配列にする\n\n--- 入力（JSON。today, clients, selected, tasks, text） ---\n",
+      "schema": {
+        "type": "OBJECT",
+        "properties": {
+          "proposals": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "kind": {
+                  "type": "STRING",
+                  "enum": [
+                    "create",
+                    "change",
+                    "route"
+                  ]
+                },
+                "target": {
+                  "type": "INTEGER"
+                },
+                "changes": {
+                  "type": "ARRAY",
+                  "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                      "field": {
+                        "type": "STRING",
+                        "enum": [
+                          "next",
+                          "due",
+                          "wake",
+                          "title",
+                          "client",
+                          "priority",
+                          "column"
+                        ]
+                      },
+                      "to": {
+                        "type": "STRING"
+                      }
+                    },
+                    "required": [
+                      "field",
+                      "to"
+                    ],
+                    "propertyOrdering": [
+                      "field",
+                      "to"
+                    ]
+                  }
+                },
+                "title": {
+                  "type": "STRING"
+                },
+                "agent_text": {
+                  "type": "STRING"
+                },
+                "route": {
+                  "type": "STRING",
+                  "enum": [
+                    "claude",
+                    "codex",
+                    "local"
+                  ]
+                },
+                "summary": {
+                  "type": "STRING"
+                }
+              },
+              "required": [
+                "kind",
+                "target",
+                "changes",
+                "title",
+                "agent_text",
+                "route",
+                "summary"
+              ],
+              "propertyOrdering": [
+                "kind",
+                "target",
+                "changes",
+                "title",
+                "agent_text",
+                "route",
+                "summary"
+              ]
+            }
+          }
+        },
+        "required": [
+          "proposals"
+        ]
+      }
+    },
+    "triage": {
+      "prompt": "あなたは受信箱の振り分け係です。まだ仕分けていないタスクそれぞれについて、今日中に人が判断・対応すべきもの（must）か、後で見ればよいもの（other）かを判定してください。\n\nmust の目安: 期限が 2 日以内、相手が返事を待っている依頼、金額・契約・顧客への回答、明示的な急ぎ。\nother の目安: 読み物、いつかやる改善、情報共有、期限の遠いもの。\n\nreason は判定理由を 20 字以内の日本語で。入力の全タスクについて 1 件ずつ返す。\n\n--- 入力（JSON。today, tasks） ---\n",
+      "schema": {
+        "type": "OBJECT",
+        "properties": {
+          "results": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "number": {
+                  "type": "INTEGER"
+                },
+                "priority": {
+                  "type": "STRING",
+                  "enum": [
+                    "must",
+                    "other"
+                  ]
+                },
+                "reason": {
+                  "type": "STRING"
+                }
+              },
+              "required": [
+                "number",
+                "priority",
+                "reason"
+              ]
+            }
+          }
+        },
+        "required": [
+          "results"
+        ]
+      }
+    }
+  }
+}
