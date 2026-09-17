@@ -8,6 +8,8 @@ GitHub Issues をカンバンで操作する個人用タスクボード。Web �
 データモデルと設計思想は [docs/data-model.md](docs/data-model.md) にまとめている。
 タスク = 1 Issue、列は `status:*` ラベル、案件・優先度・次に動く主体はラベルの名前空間、期限・再浮上日・元の文脈は本文先頭の `task` ブロック、履歴はコメント。UI はこの文書に従属する。
 
+v2（PC 版・受信箱 + AI への指示）の実装指示書は [docs/implementation-plan.md](docs/implementation-plan.md)、最終モックは [docs/mock/final-mock.html](docs/mock/final-mock.html)。
+
 ## 仕組み
 
 | 列 | GitHub 上の状態 |

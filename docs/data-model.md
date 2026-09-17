@@ -32,7 +32,7 @@ Task Board は「人は雑に書き、構造は AI が付け、エージェン�
 | 列（状態） | `state` + `status:*` ラベル | 下表 | |
 | 完了の種類 | closed の `state_reason` | `completed` / `not_planned` | 「やらないと決めた」を Done に混ぜない |
 | 案件 | ラベル `client:<slug>` | 複数可 | |
-| 次に動く主体 | ラベル `waiting` / `agent` | 排他。無ければ自分 | |
+| 次に動く主体 | ラベル `waiting` / `agent` / `agent:claude` / `agent:codex` / `agent:local` | 排他。無ければ自分 | `agent` は振り分け未定。第 7 節 |
 | 優先度 | ラベル `priority:high` | 有無のみ | |
 | 場所・文脈 | ラベル `ctx:<slug>` | 複数可 | 例: `ctx:pc2` |
 | 期限 | 本文メタ `due` | `YYYY-MM-DD` | 日付はラベルにできない |
@@ -59,7 +59,8 @@ Task Board は「人は雑に書き、構造は AI が付け、エージェン�
 | `client:` | `dbj` `shinetsu` `jica` … | 複数可 | 緑 `16a34a` | 案件・顧客 |
 | `priority:` | `high` | | 赤 `dc2626` | 優先 |
 | （接頭辞なし） | `waiting` | 排他（`agent` と） | 灰 `9ca3af` | 相手待ち。自分は動けない |
-| （接頭辞なし） | `agent` | 排他（`waiting` と） | 紫 `7c3aed` | エージェントが実行できる |
+| （接頭辞なし） | `agent` | 排他（`waiting` と） | 紫 `7c3aed` | エージェントに渡す（振り分け未定） |
+| `agent:` | `claude` `codex` `local` | 排他（`waiting`・互いに） | 紫 `7c3aed` | 実行主体。第 7.1 節 |
 | `ctx:` | `pc2` … | 複数可 | 灰 `6b7280` | 場所・環境などの文脈 |
 
 - 存在しないラベルは、アプリとエージェントが初回に自動作成する。
@@ -108,11 +109,49 @@ source: https://pragmateches.slack.com/archives/C0XXXX/p1700000000000000
 
 ## 7. エージェントとの取り決め
 
-1. **起票時は `source` を必ず入れる。** 同じ `source` を持つ open Issue があれば起票せず、その Issue にコメントを追記する（manage-task-board の Link ベース重複判定と同じ）。
-2. **状態の変更はラベルと state だけで行う。** 本文の書き換えは `task` ブロックのメタとチェックリストに限る。
-3. **作業の着手・結果・判断はコメントに書く。** 本文の自由記述部分は人のメモ領域として扱う。
-4. **`agent` ラベルの扱い。** 着手時にコメントを書き、完了時に結果コメントと共に `agent` を外す。列は人が動かす（エージェントは Done にしない）。
-5. **完了の理由を区別する。** やり終えたら `completed`、やらないと決めたら `not_planned` でクローズする。
+ボード上でのエージェントとのやり取りは **「引き継いだか / 終わったか」だけ** に絞る。会話はしない。
+状態はラベル、事実はコメント、判断は人。
+
+### 7.1 誰が動くか（ラベル）
+
+| ラベル | 意味 | 実行主体 |
+|---|---|---|
+| `agent` | エージェントに渡す（振り分け未定） | ランナーが下の 3 つのどれかに付け替える |
+| `agent:claude` | Claude Code のルーチン（クラウド）で実行 | GitHub イベント → ルーチン。PC 不要 |
+| `agent:codex` | Codex cloud で実行 | Issue に `@codex` コメント。ChatGPT の Codex に出る |
+| `agent:local` | 手元の PC で実行（Outlook・Slack・vault を使う仕事） | Agent Ops の tick が `claude -p` / `codex exec` を起動 |
+
+- `waiting` と `agent:*` は排他。`agent:*` が付いている間、人は「次に動く主体 = エージェント」として扱う
+- 振り分けはボードが Gemini に提案させ、人がチップで確認してから付ける（第 10 節）
+
+### 7.2 何を書くか（コメント）
+
+コメントは 3 種類だけ。行頭の接頭辞で機械判別する。
+
+| 接頭辞 | 誰が | 内容 |
+|---|---|---|
+| `指示:` | 人（ボード） | 何をしてほしいか。差し戻しも同じ接頭辞 |
+| `着手:` | エージェント | 引き継いだ合図。1 行。可能ならセッション URL を含める |
+| `報告:` | エージェント | 結果の要約（3〜5 行）と参照リンク。詳細はその下に書いてよい |
+
+- エージェントは `着手:` を書いたら `agent:*` はそのまま、`報告:` を書いたら `agent:*` を外す
+- `報告:` が付いた Issue は受信箱の「確認待ち」に出る。人は **承認**（`次に動く: 自分` に戻す）か **差し戻し**（`指示:` を追記して `agent:*` を再度付ける）のどちらか
+- 「途中経過」「質問」は書かない。判断が要る場合は `報告:` に選択肢を書いて止まる（人が `指示:` で答える）
+
+### 7.3 起票と重複
+
+1. **起票時は `source` を必ず入れる。** 同じ `source` を持つ open Issue があれば起票せず、その Issue に `指示:` または `報告:` を追記する（manage-task-board の Link ベース重複判定と同じ）
+2. **状態の変更はラベルと state だけで行う。** 本文の書き換えは `task` ブロックのメタとチェックリストに限る
+3. **本文の自由記述は人のメモ領域。** エージェントは触らない
+4. **エージェントは列を動かさない。** Done にするのは人（`報告:` を承認してから）
+5. **完了の理由を区別する。** やり終えたら `completed`、やらないと決めたら `not_planned`
+
+### 7.4 ランナーの責務（ボードの外）
+
+- `agent:claude`: リポジトリの GitHub イベント（ラベル付与）でルーチンを起動する。ルーチンは `着手:` → 作業 → `報告:` → ラベル除去
+- `agent:codex`: ボード（Worker）が `@codex` を含むコメントを書く。Codex の結果 PR / コメントを人が確認して `報告:` 相当に扱う
+- `agent:local`: Agent Ops の tick が `agent:local` の open Issue を拾い、`指示:` の最新を読んで `claude -p` / `codex exec` を実行し、`着手:` `報告:` を書く。lock / stop.flag / run_log は既存の tick と同じ
+- どのランナーも、失敗したら `報告: 失敗 …` を書いて `agent:*` を外す。黙って消えない
 
 ## 8. 取り込み（まとめて追加）の変換規則
 
@@ -150,3 +189,25 @@ body:
 ```
 
 `status:*` が無いので Backlog に置かれ、`priority:high` により Today ビューに出る。今は見たくないなら `wake: 2026-09-22` を書けば来週まで消える。
+
+## 10. Gemini の役割（LLM としての利用）
+
+Gemini は「入力を構造に変える頭」であり、GitHub には書き込まない。提案を JSON で返し、適用はボードのコードが行う。人は適用前に差分をチップで見る。
+
+| 用途 | 入力 | 出力（JSON スキーマ） |
+|---|---|---|
+| 貼り付けの整形 | テキスト | `tasks[]`（title, body, column, labels） |
+| 指示 → 差分 | 指示文 + 対象 Issue の現在値（title, labels, task メタ, 直近コメント 3 件） | `changes[]`（field, from, to）, `agent_requests[]`（text, route: claude / codex / local） |
+| Ctrl+K の文の解釈 | 文 + 選択中の Issue（あれば） | `proposals[]`（kind: create / change / route, 説明, 対象） |
+| 受信箱の振り分け | 新着 Issue の要約 | `priority: must / other` と理由 1 行 |
+
+- モデルは `GEMINI_MODEL`（既定 `gemini-3.8-flash`）。429 / 503 は再試行
+- Gemini の出力は常に「提案」。`Enter` で適用、`Ctrl+Z` で戻す。適用した内容は `指示:` コメントに 1 行で残す
+- 単語だけの入力（コマンド検索）は Gemini を呼ばない。文のときだけ呼ぶ
+
+## 11. 決定事項（UI）
+
+- PC 優先。Windows 前提（`Ctrl`、単キー。`Ctrl+N` `Ctrl+T` `Ctrl+W` は使わない）
+- 2 ペイン + 右パネル。起動画面は受信箱（`docs/mock/final-mock.html`）
+- 書体: Inter + Noto Sans JP（Web フォント配信）。アイコン: Phosphor Light。配色: 黒アクセントの無彩色（`docs/mock/color-sample.html` の B）
+- チャット窓は作らない。AI への指示は「右パネルの指示欄」「Ctrl+K」「報告の承認 / 差し戻し」の 3 か所
