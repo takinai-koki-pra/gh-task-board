@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>Task Board — PC モック（2 ペイン）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" />
+<style>
+  :root {
+    --bg: #f5f5f7; --side: #f0f0f3; --cell: #ffffff; --hover: #f5f5f7; --sel: #eef3ff;
+    --ink: #1d1d1f; --ink2: #6e6e73; --ink3: #b0b0b5; --sep: rgba(60,60,67,.14); --sep2: rgba(60,60,67,.24);
+    --blue: #0a66ff; --red: #e5484d; --purple: #7c5cff; --amber: #c77d00; --green: #2e9e5b;
+    --font: "Inter", "Noto Sans JP", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px 28px 80px; background: #e4e4e8; color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; font-feature-settings: "tnum"; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .lead { color: var(--ink2); font-size: 13px; margin: 0 0 24px; max-width: 980px; line-height: 1.6; }
+  .cap { font-size: 12.5px; color: var(--ink2); margin: 10px 0 34px 2px; max-width: 1120px; line-height: 1.6; }
+  .cap b { color: var(--ink); }
+  svg { width: 20px; height: 20px; fill: currentColor; flex: none; display: inline-block; vertical-align: middle; }
+  i[data-icon] { display: inline-flex; width: 20px; height: 20px; }
+  i[data-icon].s { width: 14px; height: 14px; } i[data-icon].s svg { width: 14px; height: 14px; }
+  i[data-icon].m { width: 16px; height: 16px; } i[data-icon].m svg { width: 16px; height: 16px; }
+  kbd { font-family: var(--mono); font-size: 11px; color: var(--ink2); border: 1px solid var(--sep2); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fff; line-height: 16px; display: inline-block; }
+
+  /* ---- window ---- */
+  .win { width: 1120px; height: 700px; background: var(--cell); border-radius: 10px; border: 1px solid var(--sep2); overflow: hidden; display: grid; grid-template-columns: 232px 1fr; position: relative; box-shadow: 0 24px 60px -30px rgba(0,0,0,.45); }
+
+  /* ---- sidebar ---- */
+  .side { background: var(--side); border-right: 1px solid var(--sep); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .side .app { font-size: 12px; color: var(--ink2); padding: 4px 10px 12px; display: flex; align-items: center; justify-content: space-between; }
+  .side .it { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 7px; color: var(--ink); }
+  .side .it i { color: var(--ink2); }
+  .side .it.on { background: #e3e3e8; }
+  .side .it .n { margin-left: auto; color: var(--ink2); font-size: 12.5px; }
+  .side .grp { font-size: 11px; font-weight: 600; color: var(--ink2); letter-spacing: .04em; text-transform: uppercase; padding: 16px 10px 4px; }
+  .side .dot { width: 9px; height: 9px; border-radius: 50%; margin: 0 5px 0 5px; }
+  .side .foot { margin-top: auto; padding: 8px 10px 0; color: var(--ink2); font-size: 12px; display: flex; gap: 12px; align-items: center; }
+
+  /* ---- main ---- */
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .top { display: flex; align-items: flex-end; justify-content: space-between; padding: 26px 32px 10px; }
+  .top h2 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variation-settings: "opsz" 32; }
+  .top .sub { color: var(--ink2); font-size: 13px; margin-top: 6px; }
+  .tools { display: flex; gap: 6px; align-items: center; color: var(--ink2); }
+  .tools .ib { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 7px; }
+  .tools .ib:hover { background: var(--hover); }
+  .tools .srch { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--sep2); border-radius: 7px; color: var(--ink3); width: 200px; font-size: 13px; background: #fff; }
+  .tools .srch kbd { margin-left: auto; }
+  .list { flex: 1; overflow-y: auto; padding: 4px 32px 30px; }
+  .sec { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink2); margin: 18px 0 4px 34px; }
+  .sec .n { font-weight: 400; color: var(--ink3); }
+
+  /* ---- row ---- */
+  .row { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: center; padding: 9px 10px; margin: 0 -10px; border-radius: 7px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 44px; right: 10px; height: 1px; background: var(--sep); }
+  .row:hover { background: var(--hover); }
+  .row.sel { background: var(--sel); }
+  .row.sel::before, .row.sel + .row::before { display: none; }
+  .row > i { color: var(--ink3); }
+  .row .t { font-size: 15px; font-weight: 500; line-height: 1.4; }
+  .row .t .tag { color: var(--ink2); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .row .t .pri { color: var(--red); font-weight: 700; margin-right: 3px; }
+  .row .m { font-size: 12.5px; color: var(--ink2); margin-top: 2px; display: flex; gap: 12px; align-items: center; }
+  .row .m span, .row .r span { display: inline-flex; gap: 5px; align-items: center; }
+  .row .r { font-size: 12.5px; color: var(--ink2); display: flex; gap: 12px; align-items: center; }
+  .row .r .today { color: var(--ink); font-weight: 500; }
+  .row.dim > i, .row.dim .t, .row.dim .m, .row.dim .r { opacity: .55; }
+  .row.done > i { color: var(--blue); }
+  .row.done .t { color: var(--ink3); text-decoration: line-through; }
+  .ai { color: var(--purple); } .wait { color: var(--amber); }
+
+  /* ---- expanded ---- */
+  .exp { margin: 6px -10px 6px; padding: 16px 18px 14px 18px; border: 1px solid var(--sep2); border-radius: 10px; background: #fff; box-shadow: 0 8px 28px -18px rgba(0,0,0,.35); display: grid; grid-template-columns: 22px 1fr; gap: 12px; }
+  .exp > i { color: var(--ink3); margin-top: 3px; }
+  .exp .t { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .exp .notes { color: var(--ink2); margin: 6px 0 12px; font-size: 14px; }
+  .cl { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+  .cl li { display: flex; align-items: center; gap: 9px; }
+  .cl li i { color: var(--ink3); }
+  .cl li.done { color: var(--ink3); text-decoration: line-through; } .cl li.done i { color: var(--blue); }
+  .cl li.add { color: var(--ink3); }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 12px; border-top: 1px solid var(--sep); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--sep2); font-size: 12.5px; color: var(--ink); background: #fff; }
+  .pill i { color: var(--ink2); }
+  .pill.empty { color: var(--ink3); border-style: dashed; }
+  .pill.on-wait { background: #fff7e6; border-color: #f0d9a8; color: var(--amber); } .pill.on-wait i { color: var(--amber); }
+  .pill.link { color: var(--blue); border-color: transparent; padding-left: 4px; }
+  .hist { margin-top: 14px; border-top: 1px solid var(--sep); padding-top: 10px; }
+  .hist .h { font-size: 12px; color: var(--ink2); display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .cmt { display: grid; grid-template-columns: 150px 1fr; gap: 10px; font-size: 13px; padding: 4px 0; }
+  .cmt .who { color: var(--ink2); font-size: 12px; } .cmt .who.bot { color: var(--purple); }
+  .cmt-in { margin-top: 6px; border: 1px solid var(--sep2); border-radius: 7px; padding: 7px 10px; color: var(--ink3); font-size: 13px; display: flex; justify-content: space-between; }
+
+  /* ---- new row ---- */
+  .newrow { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: center; padding: 9px 10px; margin: 4px -10px 2px; border-radius: 7px; background: var(--sel); }
+  .newrow > i { color: var(--ink3); }
+  .newrow .in { font-size: 15px; font-weight: 500; }
+  .newrow .in .caret { display: inline-block; width: 1px; height: 18px; background: var(--ink); vertical-align: -3px; margin-left: 1px; }
+  .newrow .hint { font-size: 12.5px; color: var(--ink3); margin-top: 2px; }
+  .newrow .hint b { color: var(--ink2); font-weight: 500; }
+  .newrow .r { font-size: 12px; color: var(--ink3); display: flex; gap: 6px; }
+
+  /* ---- toast ---- */
+  .toast { position: absolute; left: 252px; bottom: 18px; display: flex; align-items: center; gap: 14px; background: #1d1d1f; color: #fff; font-size: 13px; padding: 9px 12px 9px 14px; border-radius: 9px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); }
+  .toast .undo { color: #9cc0ff; display: inline-flex; gap: 6px; align-items: center; }
+  .toast kbd { background: #2c2c2e; border-color: #444; color: #ccc; }
+
+  /* ---- palette ---- */
+  .dimmer { position: absolute; inset: 0; background: rgba(0,0,0,.22); }
+  .pal { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); width: 560px; background: #fff; border-radius: 12px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.5), 0 0 0 1px var(--sep2); overflow: hidden; }
+  .pal .in { display: flex; align-items: center; gap: 10px; padding: 14px 16px; font-size: 16px; border-bottom: 1px solid var(--sep); }
+  .pal .in i { color: var(--ink2); }
+  .pal .in .caret { display: inline-block; width: 1px; height: 20px; background: var(--ink); }
+  .pal .g { font-size: 11px; font-weight: 600; color: var(--ink2); letter-spacing: .04em; text-transform: uppercase; padding: 10px 16px 4px; }
+  .pal .o { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 14px; }
+  .pal .o i { color: var(--ink2); }
+  .pal .o.on { background: var(--sel); }
+  .pal .o .k { margin-left: auto; display: flex; gap: 4px; }
+  .pal .o .sub { color: var(--ink2); font-size: 12.5px; margin-left: 6px; }
+  .pal .ft { border-top: 1px solid var(--sep); padding: 8px 16px; font-size: 12px; color: var(--ink3); display: flex; gap: 14px; }
+
+  /* ---- board ---- */
+  .board { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 8px 32px 24px; overflow: hidden; }
+  .col { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .col h3 { margin: 0 0 4px 4px; font-size: 12.5px; font-weight: 600; color: var(--ink2); display: flex; gap: 6px; align-items: center; }
+  .col h3 .n { color: var(--ink3); font-weight: 400; }
+  .card { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--sep); border-radius: 9px; background: #fff; }
+  .card > i { color: var(--ink3); margin-top: 2px; } .card > i svg { width: 18px; height: 18px; }
+  .card .t { font-size: 14px; font-weight: 500; line-height: 1.4; } .card .t .tag { color: var(--ink2); font-weight: 400; font-size: 12.5px; margin-left: 6px; } .card .t .pri { color: var(--red); font-weight: 700; margin-right: 3px; }
+  .card .m { font-size: 12px; color: var(--ink2); margin-top: 3px; display: flex; gap: 10px; } .card .m span { display: inline-flex; gap: 4px; align-items: center; }
+  .card.dim { opacity: .55; } .card.done > i { color: var(--blue); } .card.done .t { color: var(--ink3); text-decoration: line-through; }
+  .col .more { font-size: 12px; color: var(--ink3); text-align: center; padding: 6px; }
+  .segm { display: inline-flex; background: #ececf0; border-radius: 7px; padding: 2px; font-size: 12.5px; }
+  .segm span { padding: 4px 10px; border-radius: 5px; color: var(--ink2); }
+  .segm span.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+</style>
+</head>
+<body>
+<h1>Task Board — PC モック（2 ペイン）</h1>
+<p class="lead">Inter + Noto Sans JP、Phosphor Light。Windows 前提（Ctrl、単キー）。5 つの状態を静止画で。同じ行部品・同じサイドバーをすべての状態で使う。</p>
+
+<!-- ============ 1. 今日 ============ -->
+<template id="sidebar">
+  <aside class="side">
+    <div class="app"><span>takinai-koki-pra / tasks</span><i data-icon="gear" class="m"></i></div>
+    <div class="it on"><i data-icon="sun"></i>今日<span class="n">5</span></div>
+    <div class="it"><i data-icon="tray"></i>未整理<span class="n">3</span></div>
+    <div class="it"><i data-icon="hourglass"></i>相手待ち<span class="n">1</span></div>
+    <div class="it"><i data-icon="sparkle"></i>エージェント<span class="n">1</span></div>
+    <div class="it"><i data-icon="moon"></i>後で<span class="n">4</span></div>
+    <div class="grp">案件</div>
+    <div class="it"><span class="dot" style="background:var(--blue)"></span>DBJ<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#30b0c7"></span>信越<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:var(--green)"></span>JICA<span class="n">1</span></div>
+    <div class="it"><span class="dot" style="background:#9a9aa0"></span>個人・環境<span class="n">6</span></div>
+    <div class="grp">環境</div>
+    <div class="it"><span class="dot" style="background:#c9c9ce"></span>pc2<span class="n">2</span></div>
+    <div class="foot"><i data-icon="keyboard" class="m"></i><span><kbd>N</kbd> 新規 <kbd>Ctrl</kbd>+<kbd>K</kbd> パレット</span></div>
+  </aside>
+</template>
+
+<template id="rows-today">
+  <div class="sec">進行中 <span class="n">2</span></div>
+  <div class="row"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する<span class="tag">JICA</span></div><div class="m"><span><i data-icon="check-square" class="s"></i>1 / 3</span></div></div><div class="r"><span><i data-icon="calendar-blank" class="s"></i>9/19 金</span></div></div>
+  <div class="row"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する<span class="tag">pc2</span></div><div class="m"><span class="ai"><i data-icon="sparkle" class="s"></i>エージェントが調査中 · 12 分前</span></div></div><div class="r"></div></div>
+  <div class="sec">今日やる <span class="n">3</span></div>
+  <div class="row sel"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>メールを送る<span class="tag">DBJ</span></div></div><div class="r"><span class="today"><i data-icon="calendar-blank" class="s"></i>今日</span></div></div>
+  <div class="row"><i data-icon="circle"></i><div><div class="t">旧 PC を麹町オフィスへ返却する</div></div><div class="r"><span><i data-icon="calendar-blank" class="s"></i>9/19 金</span></div></div>
+  <div class="row"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>PC 内フォルダ・ルールを整理する</div><div class="m"><span><i data-icon="check-square" class="s"></i>0 / 3</span></div></div><div class="r"></div></div>
+  <div class="sec">完了 <span class="n">今日 1</span></div>
+  <div class="row done"><i data-icon="check-circle"></i><div><div class="t">Task Board の動作確認</div></div><div class="r"><span>10:02</span></div></div>
+</template>
+
+<div class="win" id="w1">
+  <div class="main">
+    <div class="top"><div><h2>今日</h2><div class="sub">9月17日 水曜日 · 5 件 · 相手待ち 1</div></div>
+      <div class="tools"><div class="srch"><i data-icon="magnifying-glass" class="m"></i>検索<kbd>/</kbd></div><div class="ib" title="まとめて追加"><i data-icon="tray-arrow-down"></i></div><div class="ib" title="ボード (B)"><i data-icon="kanban"></i></div></div></div>
+    <div class="list" data-rows="rows-today"></div>
+  </div>
+</div>
+<p class="cap"><b>1. 今日（起動直後）</b>　左は派生ビューと案件。右は大見出しと 3 セクション。選択行（薄い青）は <kbd>↑</kbd><kbd>↓</kbd> で動き、<kbd>Space</kbd> で完了、<kbd>Enter</kbd> で展開。完了は「完了」セクションに今日の分だけ残る。色は意味にだけ（赤 = 優先、琥珀 = 待ち、紫 = エージェント、青 = 選択と完了）。</p>
+
+<!-- ============ 2. 展開行 ============ -->
+<div class="win" id="w2">
+  <div class="main">
+    <div class="top"><div><h2>今日</h2><div class="sub">9月17日 水曜日 · 5 件 · 相手待ち 1</div></div>
+      <div class="tools"><div class="srch"><i data-icon="magnifying-glass" class="m"></i>検索<kbd>/</kbd></div><div class="ib"><i data-icon="tray-arrow-down"></i></div><div class="ib"><i data-icon="kanban"></i></div></div></div>
+    <div class="list">
+      <div class="sec">進行中 <span class="n">2</span></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する<span class="tag">JICA</span></div><div class="m"><span><i data-icon="check-square" class="s"></i>1 / 3</span></div></div><div class="r"><span><i data-icon="calendar-blank" class="s"></i>9/19 金</span></div></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する<span class="tag">pc2</span></div><div class="m"><span class="ai"><i data-icon="sparkle" class="s"></i>エージェントが調査中 · 12 分前</span></div></div><div class="r"></div></div>
+      <div class="sec">相手待ち <span class="n">1</span></div>
+      <div class="exp">
+        <i data-icon="circle"></i>
+        <div>
+          <div class="t">NDA の Admin 対応を待って進める</div>
+          <div class="notes">法務確認中。Admin から返答が来たら山田さんへ転送する。</div>
+          <ul class="cl">
+            <li class="done"><i data-icon="check-square" class="m"></i>Slack で NDA を依頼する</li>
+            <li><i data-icon="square" class="m"></i>返ってきたら山田さんへ転送する</li>
+            <li class="add"><i data-icon="plus" class="m"></i>項目を追加</li>
+          </ul>
+          <div class="pills">
+            <span class="pill empty"><i data-icon="calendar-blank" class="m"></i>期限</span>
+            <span class="pill"><i data-icon="moon" class="m"></i>9/22 に再表示</span>
+            <span class="pill"><span class="dot" style="width:9px;height:9px;border-radius:50%;background:#30b0c7;display:inline-block"></span>信越</span>
+            <span class="pill on-wait"><i data-icon="hourglass" class="m"></i>相手待ち · Admin</span>
+            <span class="pill empty"><i data-icon="sparkle" class="m"></i>エージェント</span>
+            <span class="pill link"><i data-icon="arrow-square-out" class="m"></i>Slack のスレッド</span>
+            <span class="pill link"><i data-icon="github-logo" class="m"></i>#9</span>
+          </div>
+          <div class="hist">
+            <div class="h"><i data-icon="chat-circle" class="s"></i>履歴 2</div>
+            <div class="cmt"><span class="who bot">manage-task-board · 9/16 10:20</span><span>sweep-slack から起票。source を記録。</span></div>
+            <div class="cmt"><span class="who">あなた · 9/17 08:05</span><span>相手待ちに変更。9/22 に再表示。</span></div>
+            <div class="cmt-in"><span>コメントを追加…</span><span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sec">今日やる <span class="n">3</span></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>メールを送る<span class="tag">DBJ</span></div></div><div class="r"><span class="today"><i data-icon="calendar-blank" class="s"></i>今日</span></div></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t">旧 PC を麹町オフィスへ返却する</div></div><div class="r"><span><i data-icon="calendar-blank" class="s"></i>9/19 金</span></div></div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>2. 展開する行</b>　<kbd>Enter</kbd> で行がその場で広がる。別画面もモーダルも無い。上から タイトル → メモ → チェックリスト → 属性のピル（期限・再表示・案件・次に動く・source）→ 履歴。ピルは押すと小さなポップオーバー（日付ならカレンダー）。<kbd>Esc</kbd> で閉じて元の行に戻る。</p>
+
+<!-- ============ 3. 入力行 + Undo ============ -->
+<div class="win" id="w3">
+  <div class="main">
+    <div class="top"><div><h2>今日</h2><div class="sub">9月17日 水曜日 · 4 件 · 相手待ち 1</div></div>
+      <div class="tools"><div class="srch"><i data-icon="magnifying-glass" class="m"></i>検索<kbd>/</kbd></div><div class="ib"><i data-icon="tray-arrow-down"></i></div><div class="ib"><i data-icon="kanban"></i></div></div></div>
+    <div class="list">
+      <div class="newrow"><i data-icon="circle"></i><div><div class="in">山田さんに見積を送る 金曜 #dbj<span class="caret"></span></div><div class="hint">期限 <b>9/19 金</b> · 案件 <b>DBJ</b> · <kbd>Enter</kbd> で追加、続けて入力できます</div></div><div class="r"><kbd>Esc</kbd></div></div>
+      <div class="sec">進行中 <span class="n">2</span></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する<span class="tag">JICA</span></div><div class="m"><span><i data-icon="check-square" class="s"></i>1 / 3</span></div></div><div class="r"><span><i data-icon="calendar-blank" class="s"></i>9/19 金</span></div></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する<span class="tag">pc2</span></div><div class="m"><span class="ai"><i data-icon="sparkle" class="s"></i>エージェントが調査中 · 12 分前</span></div></div><div class="r"></div></div>
+      <div class="sec">今日やる <span class="n">2</span></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t">旧 PC を麹町オフィスへ返却する</div></div><div class="r"><span><i data-icon="calendar-blank" class="s"></i>9/19 金</span></div></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>PC 内フォルダ・ルールを整理する</div><div class="m"><span><i data-icon="check-square" class="s"></i>0 / 3</span></div></div><div class="r"></div></div>
+      <div class="sec">完了 <span class="n">今日 2</span></div>
+      <div class="row done"><i data-icon="check-circle"></i><div><div class="t"><span class="pri" style="opacity:.5">!</span>メールを送る<span class="tag">DBJ</span></div></div><div class="r"><span>たった今</span></div></div>
+      <div class="row done"><i data-icon="check-circle"></i><div><div class="t">Task Board の動作確認</div></div><div class="r"><span>10:02</span></div></div>
+    </div>
+  </div>
+  <div class="toast"><i data-icon="check-circle" class="m" style="color:#7fd0a0"></i>「メールを送る」を完了にしました<span class="undo"><i data-icon="arrow-counter-clockwise" class="m"></i>元に戻す <kbd>Ctrl</kbd>+<kbd>Z</kbd></span></div>
+</div>
+<p class="cap"><b>3. 先頭に生える入力行と Undo</b>　<kbd>N</kbd> で一覧の先頭に空行が生え、そこに打つ。「金曜」「来週」「9/19」は期限に、「#dbj」は案件に、その場で解釈してヒント行に出す（確定は <kbd>Enter</kbd>）。直前の完了は左下のトーストから 8 秒間 <kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻せる。確認ダイアログは一切出さない。</p>
+
+<!-- ============ 4. Ctrl+K ============ -->
+<div class="win" id="w4">
+  <div class="main">
+    <div class="top"><div><h2>今日</h2><div class="sub">9月17日 水曜日 · 5 件 · 相手待ち 1</div></div>
+      <div class="tools"><div class="srch"><i data-icon="magnifying-glass" class="m"></i>検索<kbd>/</kbd></div><div class="ib"><i data-icon="tray-arrow-down"></i></div><div class="ib"><i data-icon="kanban"></i></div></div></div>
+    <div class="list" data-rows="rows-today"></div>
+  </div>
+  <div class="dimmer"></div>
+  <div class="pal">
+    <div class="in"><i data-icon="magnifying-glass"></i>らい<span class="caret"></span></div>
+    <div class="g">選択中のタスクに</div>
+    <div class="o on"><i data-icon="moon"></i>来週に再表示<span class="sub">9/24 水</span><span class="k"><kbd>2</kbd></span></div>
+    <div class="o"><i data-icon="calendar-blank"></i>期限を来週金曜に<span class="sub">9/26</span></div>
+    <div class="g">移動</div>
+    <div class="o"><i data-icon="sun"></i>今日</div>
+    <div class="o"><i data-icon="kanban"></i>ボード<span class="k"><kbd>B</kbd></span></div>
+    <div class="g">タスク</div>
+    <div class="o"><i data-icon="circle"></i>スライド作成スキルを更新する<span class="sub">pc2 · 進行中</span></div>
+    <div class="ft"><span><kbd>↑</kbd><kbd>↓</kbd> 選択</span><span><kbd>Enter</kbd> 実行</span><span><kbd>Esc</kbd> 閉じる</span></div>
+  </div>
+</div>
+<p class="cap"><b>4. コマンドパレット（Ctrl+K）</b>　打った文字で「選択中のタスクへの操作」「移動」「タスク検索」を一つの入力から。単キーを覚えなくてもここから全部できる。日本語入力中は <kbd>Enter</kbd> を確定に使うので、変換中は反応しない。</p>
+
+<!-- ============ 5. ボード ============ -->
+<div class="win" id="w5">
+  <div class="main">
+    <div class="top"><div><h2>ボード</h2><div class="sub">すべての案件 · 相手待ちは薄く、後で 1 件は畳んで表示</div></div>
+      <div class="tools"><span class="segm"><span>一覧</span><span class="on">ボード</span></span><div class="srch" style="margin-left:6px"><i data-icon="magnifying-glass" class="m"></i>検索<kbd>/</kbd></div><div class="ib"><i data-icon="tray-arrow-down"></i></div></div></div>
+    <div class="board">
+      <div class="col"><h3>Backlog <span class="n">5</span></h3>
+        <div class="card"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>PC 内フォルダ・ルールを整理する</div><div class="m"><span><i data-icon="check-square" class="s"></i>0 / 3</span></div></div></div>
+        <div class="card"><i data-icon="circle"></i><div><div class="t">Outlook スキルを整理する</div><div class="m"><span><i data-icon="check-square" class="s"></i>0 / 2</span></div></div></div>
+        <div class="card"><i data-icon="circle"></i><div><div class="t">UPSIDER スキルを整理する</div><div class="m"><span><i data-icon="check-square" class="s"></i>0 / 2</span></div></div></div>
+        <div class="card"><i data-icon="circle"></i><div><div class="t">AI チームダッシュボードの Issue をつぶす<span class="tag">pc2</span></div></div></div>
+        <div class="more">後で 1 件</div>
+      </div>
+      <div class="col"><h3>Todo <span class="n">3</span></h3>
+        <div class="card"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>メールを送る<span class="tag">DBJ</span></div><div class="m"><span style="color:var(--ink)"><i data-icon="calendar-blank" class="s"></i>今日</span></div></div></div>
+        <div class="card"><i data-icon="circle"></i><div><div class="t">旧 PC を麹町オフィスへ返却する</div><div class="m"><span><i data-icon="calendar-blank" class="s"></i>9/19 金</span></div></div></div>
+        <div class="card dim"><i data-icon="circle"></i><div><div class="t">NDA の Admin 対応を待って進める<span class="tag">信越</span></div><div class="m"><span class="wait"><i data-icon="hourglass" class="s"></i>Admin</span><span><i data-icon="moon" class="s"></i>9/22</span></div></div></div>
+      </div>
+      <div class="col"><h3>Doing <span class="n">2</span></h3>
+        <div class="card"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する<span class="tag">JICA</span></div><div class="m"><span><i data-icon="check-square" class="s"></i>1 / 3</span><span><i data-icon="calendar-blank" class="s"></i>9/19</span></div></div></div>
+        <div class="card"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する<span class="tag">pc2</span></div><div class="m"><span class="ai"><i data-icon="sparkle" class="s"></i>調査中</span></div></div></div>
+      </div>
+      <div class="col"><h3>Done <span class="n">3</span></h3>
+        <div class="card done"><i data-icon="check-circle"></i><div><div class="t">Task Board の動作確認</div><div class="m"><span>9/16</span></div></div></div>
+        <div class="card done"><i data-icon="check-circle"></i><div><div class="t">fine-grained PAT を発行する</div><div class="m"><span>9/16</span></div></div></div>
+        <div class="more">やらないと決めた 1 件</div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>5. ボード</b>　<kbd>B</kbd> で一覧と切替。サイドバーはそのまま、列は 4 つのまま。カードは一覧の行と同じ部品。ドラッグで列移動、カードの丸をクリックで完了。</p>
+
+<script>
+  // サイドバーとテンプレ行を各ウィンドウに展開
+  const side = document.getElementById("sidebar").content;
+  document.querySelectorAll(".win").forEach((w) => w.insertBefore(side.cloneNode(true), w.firstChild));
+  document.querySelectorAll("[data-rows]").forEach((el) => el.appendChild(document.getElementById(el.dataset.rows).content.cloneNode(true)));
+
+  // Phosphor Light を CDN から取得して inline SVG に
+  const BASE = "https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1/assets/light/";
+  const cache = new Map();
+  const load = (name) => {
+    if (!cache.has(name)) cache.set(name, fetch(`${BASE}${name}-light.svg`).then((r) => (r.ok ? r.text() : "")).then((s) => s.replace(/\s(width|height)="[^"]*"/g, "")).catch(() => ""));
+    return cache.get(name);
+  };
+  document.querySelectorAll("i[data-icon]").forEach(async (el) => { el.innerHTML = await load(el.dataset.icon); });
+</script>
+</body>
+</html>

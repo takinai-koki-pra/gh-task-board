@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>カラーデザイン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" />
+<style>
+  body { margin: 0; padding: 28px 28px 80px; background: #e4e4e8; color: #1d1d1f; font-family: "Inter", "Noto Sans JP", system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; font-feature-settings: "tnum"; }
+  * { box-sizing: border-box; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 14px; font-weight: 600; margin: 34px 0 10px; }
+  .lead { color: #6e6e73; font-size: 13px; margin: 0 0 20px; max-width: 980px; line-height: 1.6; }
+  svg { width: 20px; height: 20px; fill: currentColor; flex: none; display: inline-block; vertical-align: middle; }
+  i[data-icon] { display: inline-flex; width: 20px; height: 20px; }
+  i[data-icon].s { width: 14px; height: 14px; } i[data-icon].s svg { width: 14px; height: 14px; }
+
+  /* ---- 原則の表 ---- */
+  table.rules { border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid rgba(60,60,67,.24); font-size: 13px; }
+  table.rules th, table.rules td { padding: 9px 14px; border-top: 1px solid rgba(60,60,67,.14); text-align: left; vertical-align: top; }
+  table.rules th { font-weight: 600; color: #6e6e73; font-size: 12px; }
+  table.rules thead th { border-top: 0; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(0,0,0,.08); }
+
+  /* ---- スケール ---- */
+  .scale { display: flex; gap: 6px; }
+  .scale div { flex: 1; height: 54px; border-radius: 8px; display: flex; align-items: flex-end; padding: 6px 8px; font-size: 11px; font-family: ui-monospace, Consolas, monospace; border: 1px solid rgba(0,0,0,.06); }
+
+  /* ---- テーマ適用サンプル ---- */
+  .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .theme { border-radius: 12px; overflow: hidden; border: 1px solid rgba(60,60,67,.24); background: var(--cell); color: var(--ink); font-size: 14px; }
+  .theme .hd { padding: 12px 16px 8px; font-size: 12px; color: var(--ink2); background: var(--side); border-bottom: 1px solid var(--sep); display: flex; justify-content: space-between; }
+  .theme .hd b { color: var(--ink); font-size: 13px; }
+  .theme .body { padding: 8px 14px 12px; }
+  .theme .title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 8px 0 2px; }
+  .theme .sub { font-size: 12px; color: var(--ink2); margin-bottom: 8px; }
+  .theme .sec { font-size: 12px; font-weight: 600; color: var(--ink2); margin: 12px 0 2px 34px; }
+  .row { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: center; padding: 8px 8px; margin: 0 -8px; border-radius: 7px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 42px; right: 8px; height: 1px; background: var(--sep); }
+  .row.sel { background: var(--sel); } .row.sel::before, .row.sel + .row::before { display: none; }
+  .row > i { color: var(--ink3); }
+  .row .t { font-size: 14.5px; font-weight: 500; }
+  .row .t .tag { color: var(--ink2); font-weight: 400; font-size: 12.5px; margin-left: 7px; }
+  .row .t .pri { color: var(--red); font-weight: 700; margin-right: 3px; }
+  .row .m { font-size: 12px; color: var(--ink2); margin-top: 2px; display: flex; gap: 10px; } .row .m span, .row .r span { display: inline-flex; gap: 4px; align-items: center; }
+  .row .r { font-size: 12px; color: var(--ink2); } .row .r .today { color: var(--ink); font-weight: 500; }
+  .row.dim > i, .row.dim .t, .row.dim .m, .row.dim .r { opacity: .55; }
+  .row.done > i { color: var(--accent); } .row.done .t { color: var(--ink3); text-decoration: line-through; }
+  .ai { color: var(--purple); } .wait { color: var(--amber); }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--sep); }
+  .pill { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--sep2); font-size: 12px; background: var(--cell); color: var(--ink); }
+  .pill i { color: var(--ink2); }
+  .pill.on-wait { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); } .pill.on-wait i { color: var(--amber); }
+  .pill.link { color: var(--accent); border-color: transparent; padding-left: 3px; }
+  .btn { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 7px; font-size: 12.5px; font-weight: 500; background: var(--accent); color: #fff; margin-top: 10px; }
+  .toast { margin-top: 10px; display: inline-flex; gap: 12px; align-items: center; background: var(--toast); color: var(--toast-ink); font-size: 12.5px; padding: 8px 12px; border-radius: 8px; }
+  .toast .u { color: var(--toast-link); }
+
+  /* テーマ定義 */
+  .light { --cell: #ffffff; --side: #f0f0f3; --hover: #f5f5f7; --sel: #eef3ff; --ink: #1d1d1f; --ink2: #6e6e73; --ink3: #b0b0b5; --sep: rgba(60,60,67,.14); --sep2: rgba(60,60,67,.24);
+           --accent: #0a66ff; --red: #e5484d; --amber: #c77d00; --amber-bg: #fff7e6; --amber-bd: #f0d9a8; --purple: #7c5cff; --toast: #1d1d1f; --toast-ink: #fff; --toast-link: #9cc0ff; }
+  .light.graphite { --accent: #1d1d1f; --sel: #ececef; --toast-link: #ffd08a; }
+  .light.orange { --accent: #f2620f; --sel: #fff1e8; --toast-link: #ffb27a; }
+  .dark { --cell: #1c1c1e; --side: #161618; --hover: #242426; --sel: #1e2a44; --ink: #f2f2f4; --ink2: #9a9aa0; --ink3: #5c5c62; --sep: rgba(255,255,255,.08); --sep2: rgba(255,255,255,.16);
+          --accent: #4d8cff; --red: #ff6b6b; --amber: #e8a33d; --amber-bg: #2b2415; --amber-bd: #4a3b1c; --purple: #a58cff; --toast: #f2f2f4; --toast-ink: #1c1c1e; --toast-link: #1f5fd6; }
+</style>
+</head>
+<body>
+<h1>カラーデザイン</h1>
+<p class="lead">原則は 3 つ。① UI は無彩色で組む（背景 2 段、文字 3 段、区切り 2 段）。② 色は意味にだけ使い、意味は 4 つ（優先 = 赤、相手待ち = 琥珀、エージェント = 紫、選択と完了 = アクセント）。③ アクセントは 1 色だけで、装飾に使わない。ここではアクセントを 3 通り並べ、同じ画面をダークでも示す。</p>
+
+<h2>無彩色のスケール（ライト）</h2>
+<div class="scale">
+  <div style="background:#ffffff">cell #ffffff</div>
+  <div style="background:#f5f5f7">hover #f5f5f7</div>
+  <div style="background:#f0f0f3">side #f0f0f3</div>
+  <div style="background:#e3e3e8">sel-side #e3e3e8</div>
+  <div style="background:#b0b0b5;color:#fff">ink3 #b0b0b5</div>
+  <div style="background:#6e6e73;color:#fff">ink2 #6e6e73</div>
+  <div style="background:#1d1d1f;color:#fff">ink #1d1d1f</div>
+</div>
+<p class="lead" style="margin-top:10px">背景は白（#fff）と、ごく薄い灰（#f5f5f7 / #f0f0f3）の 2 段だけ。純粋な灰ではなく、わずかに青みを含む（Apple の systemGray 系と同じ）。区切り線は黒の 14% と 24% の 2 段で、色を持たない。</p>
+
+<h2>意味の色</h2>
+<table class="rules">
+  <thead><tr><th>役割</th><th>色</th><th>使う場所</th><th>使わない場所</th></tr></thead>
+  <tbody>
+    <tr><td><b>アクセント</b></td><td><span class="sw" style="background:#0a66ff"></span>#0a66ff（候補 A）</td><td>選択行の背景（薄く）、完了のチェック、リンク、主ボタン、Undo</td><td>見出し、アイコン全般、装飾の帯</td></tr>
+    <tr><td><b>優先</b></td><td><span class="sw" style="background:#e5484d"></span>#e5484d</td><td>タイトル頭の「!」、期限超過の日付</td><td>背景、ボーダー</td></tr>
+    <tr><td><b>相手待ち</b></td><td><span class="sw" style="background:#c77d00"></span>#c77d00</td><td>待ちの補助行とピル（ピルだけ薄い琥珀の地）</td><td>行全体の背景（行は薄くするだけ）</td></tr>
+    <tr><td><b>エージェント</b></td><td><span class="sw" style="background:#7c5cff"></span>#7c5cff</td><td>sparkle アイコンと「調査中」の補助行、履歴のエージェント名</td><td>カード全体</td></tr>
+    <tr><td><b>案件</b></td><td><span class="sw" style="background:#0a66ff"></span><span class="sw" style="background:#30b0c7"></span><span class="sw" style="background:#2e9e5b"></span><span class="sw" style="background:#9a9aa0"></span> 小さな点だけ</td><td>サイドバーの案件名の左、展開行のピル</td><td>行の中（行では文字の「DBJ」だけ）。色数が増えても行は汚れない</td></tr>
+  </tbody>
+</table>
+
+<h2>アクセント 3 案 + ダーク（同じ画面）</h2>
+<div class="themes">
+  <template id="sample">
+    <div class="body">
+      <div class="title">今日</div>
+      <div class="sub">9月17日 水曜日 · 5 件</div>
+      <div class="sec">進行中</div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t">事前相談のアジェンダを用意する<span class="tag">JICA</span></div><div class="m"><span><i data-icon="check-square" class="s"></i>1 / 3</span></div></div><div class="r"><span><i data-icon="calendar-blank" class="s"></i>9/19</span></div></div>
+      <div class="row"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>スライド作成スキルを更新する<span class="tag">pc2</span></div><div class="m"><span class="ai"><i data-icon="sparkle" class="s"></i>エージェントが調査中</span></div></div><div class="r"></div></div>
+      <div class="sec">今日やる</div>
+      <div class="row sel"><i data-icon="circle"></i><div><div class="t"><span class="pri">!</span>メールを送る<span class="tag">DBJ</span></div></div><div class="r"><span class="today"><i data-icon="calendar-blank" class="s"></i>今日</span></div></div>
+      <div class="row dim"><i data-icon="circle"></i><div><div class="t">NDA の Admin 対応を待って進める<span class="tag">信越</span></div><div class="m"><span class="wait"><i data-icon="hourglass" class="s"></i>Admin の返答待ち</span></div></div><div class="r"></div></div>
+      <div class="row done"><i data-icon="check-circle"></i><div><div class="t">Task Board の動作確認</div></div><div class="r"><span>10:02</span></div></div>
+      <div class="pills"><span class="pill"><i data-icon="calendar-blank" class="s"></i>9/19 金</span><span class="pill on-wait"><i data-icon="hourglass" class="s"></i>相手待ち</span><span class="pill link"><i data-icon="arrow-square-out" class="s"></i>Slack</span></div>
+      <span class="btn">追加</span>
+      <div class="toast">完了にしました <span class="u">元に戻す</span></div>
+    </div>
+  </template>
+  <div class="theme light"><div class="hd"><b>A. 青</b><span>#0a66ff · Apple/Things 系</span></div><div data-sample></div></div>
+  <div class="theme light graphite"><div class="hd"><b>B. 黒</b><span>#1d1d1f · 無彩色一色</span></div><div data-sample></div></div>
+  <div class="theme light orange"><div class="hd"><b>C. 橙</b><span>#f2620f · 温かい一点</span></div><div data-sample></div></div>
+  <div class="theme dark"><div class="hd"><b>A · ダーク</b><span>#4d8cff on #1c1c1e</span></div><div data-sample></div></div>
+</div>
+<p class="lead" style="margin-top:12px">推奨は <b>A（青）</b>。「選択」「完了」「リンク」を同じ 1 色で示せて、赤・琥珀・紫の意味色と衝突しない。B は最も静かだが、完了とリンクが黒になり「押せる」ことが弱くなる。C は個性が出るが、琥珀（相手待ち）と近く、意味色として混ざる。</p>
+
+<script>
+  const tpl = document.getElementById("sample").content;
+  document.querySelectorAll("[data-sample]").forEach((el) => el.appendChild(tpl.cloneNode(true)));
+  const BASE = "https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1/assets/light/";
+  const cache = new Map();
+  const load = (n) => { if (!cache.has(n)) cache.set(n, fetch(`${BASE}${n}-light.svg`).then((r) => (r.ok ? r.text() : "")).then((s) => s.replace(/\s(width|height)="[^"]*"/g, "")).catch(() => "")); return cache.get(n); };
+  document.querySelectorAll("i[data-icon]").forEach(async (el) => { el.innerHTML = await load(el.dataset.icon); });
+</script>
+</body>
+</html>
