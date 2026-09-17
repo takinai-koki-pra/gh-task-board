@@ -101,11 +101,17 @@ source: https://pragmateches.slack.com/archives/C0XXXX/p1700000000000000
 
 | ビュー | 条件 |
 |---|---|
-| Today | open ∧ (`wake` 未設定 or `wake` ≤ 今日) ∧ ¬`waiting` ∧ (`status:doing` ∨ `due` ≤ 今日 ∨ `priority:high`) |
+| 受信箱 | open ∧ ((`status:*` 無し ∧ `wake` 未設定) ∨ 最新コメントが `報告:`) |
+| Today | open ∧ (`wake` 未設定 or `wake` ≤ 今日) ∧ ¬`waiting` ∧ ¬`agent*` ∧ (`status:todo` ∨ `status:doing` ∨ `due` ≤ 今日 ∨ `priority:high`) |
 | 相手待ち | open ∧ `waiting` |
-| エージェント待ち行列 | open ∧ `agent` |
+| エージェント待ち行列 | open ∧ `agent*`（`agent` または `agent:*`） |
+| 後で | open ∧ `wake` > 今日 |
 | 期限切れ | open ∧ `due` < 今日 |
 | チェックリスト進捗 | 本文の `- [x]` / `- [ ]` を数える |
+
+受信箱の仕分け（キー操作）は必ず列か `wake` を与えて受信箱から出す: 今日 = `status:todo`、後で = `wake` +7 日（Backlog）、相手待ち = `waiting` + `status:todo`、エージェント = `agent` + `status:todo`。
+起票時に `waiting` / `agent` が付いていても、列が無ければ未仕分けとして受信箱に出る。
+`報告:` の承認は `指示: 承認 …` コメントを 1 行書いて最新コメントを進める（第 7.2 節のコメント 3 種に収まる）。
 
 ## 7. エージェントとの取り決め
 
