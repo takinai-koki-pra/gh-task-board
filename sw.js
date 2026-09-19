@@ -1,5 +1,5 @@
 // アプリシェルをキャッシュする Service Worker。GitHub API と AI はキャッシュしない。
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = `ghtb-${VERSION}`;
 const ICONS = [
   "tray", "sun", "hourglass", "sparkle", "moon", "kanban", "magnifying-glass", "gear", "circle", "check-circle",

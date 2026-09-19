@@ -248,7 +248,6 @@ function renderStatus() {
     if (state.view.kind === "board") parts.push(k(kbd("←") + kbd("→"), " 列を移動"));
     if (task?.reportPending) parts.push(k(kbd("Y"), " 承認"), k(kbd("R"), " 差し戻し"));
     parts.push(k(kbd("1"), " 今日"), k(kbd("2"), " 後で"), k(kbd("3"), " 相手待ち"), k(kbd("4"), " エージェント"), k(kbd("E"), " 完了"), k(kbd("I"), " 指示"));
-    if (state.view.kind === "inbox") parts.push(k(kbd("Tab"), " タブ"));
     if (undo.size) parts.push(k(kbd("Ctrl", "Z"), " 元に戻す"));
   }
   el.status.innerHTML = parts.join("");
@@ -284,8 +283,6 @@ function openTask(number) {
   if (!task) return;
   if (!viewContains(state.view, task)) {
     if (VIEWS.inbox(task, state.today)) {
-      const { must } = splitInbox(viewCtx());
-      state.inboxTab = must.some((t) => t.number === number) ? "must" : "other";
       state.view = { kind: "inbox" };
     } else if (VIEWS.today(task, state.today)) state.view = { kind: "today" };
     else state.view = { kind: "board" };
@@ -1120,14 +1117,6 @@ document.addEventListener("keydown", (e) => {
     case "b": case "B": e.preventDefault(); setView({ kind: "board" }, { keepSelection: true }); break;
     case "g": case "G": state.chord = "g"; setTimeout(() => { state.chord = null; }, 1200); break;
     case "n": case "N": e.preventDefault(); openNewRow(); break;
-    case "Tab":
-      if (state.view.kind === "inbox" && !inPanel) {
-        e.preventDefault();
-        state.inboxTab = state.inboxTab === "must" ? "other" : "must";
-        state.selected = null;
-        render();
-      }
-      break;
     case "Escape":
       if (el.app.classList.contains("panel-open")) { el.app.classList.remove("panel-open"); break; }
       if (inPanel || document.activeElement === el.panel) { el.view.focus(); break; }
@@ -1278,5 +1267,20 @@ boot();
 if ("serviceWorker" in navigator) {
   const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
   if (isLocal || state.demo) navigator.serviceWorker.getRegistrations?.().then((rs) => rs.forEach((r) => r.unregister()));
-  else window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  else {
+    // デプロイ後に古いアプリが残らないよう、SW が入れ替わったら 1 回だけ再読み込みする（初回インストール時は除く）
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").then((reg) => {
+        // タブを開きっぱなしでも、戻ってきたときに更新を確認する
+        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+      }).catch(() => {});
+    });
+  }
 }
